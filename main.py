@@ -22,6 +22,9 @@ class Deepmex:
         self.periods = periods
         self.client = bitmex
 
+    def current_leverage(self):
+        return self.current_position()['leverage']
+
     def has_open_orders(self):
         return len(self.fetch_open_orders()) > 0
 
@@ -67,7 +70,7 @@ class Deepmex:
             print(cancel)
             print(cancel['status'] + ' ' + cancel['id'])
 
-    def fetch_prev_ohlc(self, periods='1h'):
+    def fetch_ohlc(self, periods='1h'):
         timest = self.client.fetch_ticker('BTC/USD')['timestamp']
         if periods == '3m':
             timest = timest - 3 * 3 * 60
@@ -77,24 +80,43 @@ class Deepmex:
             timest = timest - 3 * 3600000 * 24
 
         candles = self.client.fetch_ohlcv('BTC/USD', timeframe=periods, since=timest)
-        return candles[1]
+        for c in candles:
+            print(c)
+
+        return candles[0], candles[1]
 
     def calc_pivot(self):
-        prev_ohlc = self.fetch_prev_ohlc(periods=self.periods)
+        curr_ohlc, prev_ohlc = self.fetch_ohlc(periods=self.periods)
 
-        high = prev_ohlc[2]
-        low = prev_ohlc[3]
-        close = prev_ohlc[4]
+        prev_high = prev_ohlc[2]
+        prev_low = prev_ohlc[3]
+        prev_close = prev_ohlc[4]
 
-        pivot = round((high + low + close) / 3, 1)
-        r3 = round(high + 2 * (pivot - low))
-        r2 = round(pivot + (high - low))
-        r1 = round((2 * pivot) - low)
-        s1 = round((2 * pivot) - high)
-        s2 = round(pivot - (high - low))
-        s3 = round(low - 2 * (high - pivot))
+        pivot = round((prev_high + prev_low + prev_close) / 3, 1)
+        r3 = round(prev_high + 2 * (pivot - prev_low))
+        r2 = round(pivot + (prev_high - prev_low))
+        r1 = round((2 * pivot) - prev_low)
+        s1 = round((2 * pivot) - prev_high)
+        s2 = round(pivot - (prev_high - prev_low))
+        s3 = round(prev_low - 2 * (prev_high - pivot))
 
-        return r3, r2, r1, pivot, s1, s2, s3
+        high = curr_ohlc[2]
+        low = curr_ohlc[3]
+
+        r = r1
+        s = s1
+
+        if r1 < high:
+            r = r2
+        if r2 < high:
+            r = r3
+
+        if s1 > low:
+            s = s2
+        if s2 > low:
+            s = s3
+
+        return r, pivot, s
 
     def opener_run(self):
         while True:
@@ -103,20 +125,22 @@ class Deepmex:
                     time.sleep(10)
                     continue
 
-                r3, r2, r1, pivot, s1, s2, s3 = self.calc_pivot()
+                r, p, s = self.calc_pivot()
 
-                self.limit_order(side='sell', price=r1, size=self.order_size)
-                self.limit_order(side='buy', price=s1, size=self.order_size)
+                self.limit_order(side='sell', price=r, size=self.order_size)
+                self.limit_order(side='buy', price=s, size=self.order_size)
 
-                prev_range=(r1-s1)/r1*100
+                leverage = self.current_leverage()
+                prev_range=(r-s)/r*100
 
+                print("Leverage: ", leverage)
                 print("Periods: ", self.periods)
-                print("R1: ", r1)
-                print("S1: ", s1)
+                print("R: ", r)
+                print("S: ", s)
                 print("Prev Range %: ", prev_range)
 
-                self.close_percent = prev_range / 3.0
-                self.loss_cut_percent = -1 * prev_range / 10.0
+                self.close_percent = prev_range / 3.0 * leverage
+                self.loss_cut_percent = -1 * prev_range / 10.0 * leverage
 
                 print("Close %: ", self.close_percent)
                 print("Loss cut %: ", self.loss_cut_percent)
