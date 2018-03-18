@@ -67,20 +67,24 @@ class Deepmex:
             print(cancel)
             print(cancel['status'] + ' ' + cancel['id'])
 
-    def fetch_ohlc(self, periods='180'):
-        q = {'periods': ','.join([periods])}
-        res = requests.get('https://api.cryptowat.ch/markets/bitmex/btcusd-perpetual-futures/ohlc', params=q)
-        return json.loads(res.text)['result'][periods]
+    def fetch_prev_ohlc(self, periods='1h'):
+        timest = self.client.fetch_ticker('BTC/USD')['timestamp']
+        if periods == '3m':
+            timest = timest - 3 * 3 * 60
+        elif periods == '1h':
+            timest = timest - 3 * 3600000
+        else:
+            timest = timest - 3 * 3600000 * 24
+
+        candles = self.client.fetch_ohlcv('BTC/USD', timeframe=periods, since=timest)
+        return candles[1]
 
     def calc_pivot(self):
-        p = str(self.periods * 60)
-        ohlc = self.fetch_ohlc(periods=p)
-        length = len(ohlc)
-        last_ohlc = ohlc[length - 1]
+        prev_ohlc = self.fetch_prev_ohlc(periods=self.periods)
 
-        high = last_ohlc[2]
-        low = last_ohlc[3]
-        close = last_ohlc[4]
+        high = prev_ohlc[2]
+        low = prev_ohlc[3]
+        close = prev_ohlc[4]
 
         pivot = round((high + low + close) / 3, 1)
         r3 = round(high + 2 * (pivot - low))
@@ -106,7 +110,7 @@ class Deepmex:
 
                 prev_range=(r1-s1)/r1*100
 
-                print("Periods: ", self.periods, "min")
+                print("Periods: ", self.periods)
                 print("R1: ", r1)
                 print("S1: ", s1)
                 print("Prev Range %: ", prev_range)
@@ -170,7 +174,7 @@ class Deepmex:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This is trading script on bitmex')
     parser.add_argument('size', type=int)
-    parser.add_argument('periods', type=int, default=60*24)
+    parser.add_argument('periods', default='1h')
     parser.add_argument('--debug', default=False, action='store_true')
     args = parser.parse_args()
 
