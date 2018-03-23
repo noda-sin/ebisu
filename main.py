@@ -109,7 +109,7 @@ class Deepmex:
         if position_size == 0:
             return
         side = 'buy' if position_size < 0 else 'sell'
-        self.market_order(side=side, size=position_size)
+        self.market_limit_order(side=side, size=position_size)
         print('-----------------------')
 
     def market_last_price(self):
@@ -123,6 +123,20 @@ class Deepmex:
 
     def limit_order(self, side, price, size):
         return self.create_order(type='limit', side=side, price=price, size=size)
+
+    def market_limit_order(self, side, size):
+        while True:
+            last_price = self.market_last_price()
+            self.limit_order(side=side, price=last_price, size=size)
+            time.sleep(10)
+            if self.has_open_orders():
+                self.cancel_orders()
+                if not self.has_position():
+                    continue
+                else:
+                    break
+            else:
+                break
 
     def market_order(self, side, size):
         return self.create_order(type='market', side=side, size=size)
@@ -178,9 +192,15 @@ class Deepmex:
                 position_size = position['currentQty']
 
                 if up and position_size <= 0:
-                    self.market_order('buy', lot)
+                    if self.has_position():
+                        self.market_limit_order('buy', lot)
+                    else:
+                        self.market_limit_order('buy', lot*2)
                 elif dn and position_size >= 0:
-                    self.market_order('sell', lot)
+                    if self.has_position():
+                        self.market_limit_order('sell', lot)
+                    else:
+                        self.market_limit_order('sell', lot*2)
             except Exception as e:
                 print(e)
             time.sleep(10)
