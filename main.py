@@ -167,7 +167,7 @@ class Deepmex:
                 ohlc = self.fetch_ohlc()
 
                 timeperiod = 7
-                lot = 20
+                lot = 50
 
                 open  = np.array([v[OPEN]  for _, v in enumerate(ohlc)])
                 high  = np.array([v[HIGH]  for _, v in enumerate(ohlc)])
@@ -194,13 +194,11 @@ class Deepmex:
                 if up and position_size <= 0:
                     if self.has_position():
                         self.market_limit_order('buy', lot)
-                    else:
-                        self.market_limit_order('buy', lot*2)
+                    self.market_limit_order('buy', lot)
                 elif dn and position_size >= 0:
                     if self.has_position():
                         self.market_limit_order('sell', lot)
-                    else:
-                        self.market_limit_order('sell', lot*2)
+                    self.market_limit_order('sell', lot)
             except Exception as e:
                 print(e)
             time.sleep(10)
