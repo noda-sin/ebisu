@@ -1,0 +1,5 @@
+ccxt
+Flask
+ta-lib
+numpy
+pandas

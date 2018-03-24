@@ -1,25 +1,25 @@
 import argparse
 import sys
-import threading
-import time
+
+from flask import Flask, render_template
 
 from exchange import *
-from strategy import *
 
 class Bot:
     def __init__(self, debug=True):
-        if debug:
-            self.bitmex = BitMexStub()
-        else:
-            self.bitmex = BitMex()
+        # if debug:
+        #     self.bitmex = BitMexStub()
+        # else:
+        self.bitmex = BitMex(debug=debug)
 
     def opener_run(self):
         while True:
             try:
-                time.sleep(5)
-                self.bitmex.market_limit_order('buy', 20)
-                time.sleep(5)
-                self.bitmex.close_position()
+                pass
+                # time.sleep(5)
+                # self.bitmex.market_limit_order('buy', 20)
+                # time.sleep(5)
+                # self.bitmex.close_position()
 
                 # if self.bitmex.has_open_orders():
                 #     time.sleep(10)
@@ -72,28 +72,36 @@ class Bot:
         #     time.sleep(10)
 
     def run(self):
-        try:
-            opener = threading.Thread(target=self.opener_run)
-            opener.daemon = True
-            opener.start()
+        opener = threading.Thread(target=self.opener_run)
+        opener.daemon = True
+        opener.start()
 
-            closer = threading.Thread(target=self.closer_run)
-            closer.daemon = True
-            closer.start()
-            while True: time.sleep(100)
-        except (KeyboardInterrupt, SystemExit):
-            self.exit()
+        closer = threading.Thread(target=self.closer_run)
+        closer.daemon = True
+        closer.start()
 
     def exit(self):
         self.bitmex.cancel_orders()
         self.bitmex.close_position()
         sys.exit()
 
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    title = "hello"
+    return render_template('index.html', title=title)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='This is trading script on exchange.py')
+    parser = argparse.ArgumentParser()
     parser.add_argument('--debug', default=False, action='store_true')
     args = parser.parse_args()
 
     bot = Bot(debug=args.debug)
     bot.run()
+
+    try:
+        app.debug = True
+        app.run(host='0.0.0.0')
+    except (KeyboardInterrupt, SystemExit):
+        bot.exit()
