@@ -6,11 +6,7 @@ from flask import Flask, render_template
 from exchange import *
 
 class Bot:
-    def __init__(self, debug=True):
-        # if debug:
-        #     self.bitmex = BitMexStub()
-        # else:
-        self.bitmex = BitMex(debug=debug)
+    debug = True
 
     def opener_run(self):
         while True:
@@ -72,6 +68,8 @@ class Bot:
         #     time.sleep(10)
 
     def run(self):
+        self.bitmex = BitMex(debug=self.debug)
+
         opener = threading.Thread(target=self.opener_run)
         opener.daemon = True
         opener.start()
@@ -84,24 +82,3 @@ class Bot:
         self.bitmex.cancel_orders()
         self.bitmex.close_position()
         sys.exit()
-
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    title = "hello"
-    return render_template('index.html', title=title)
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--debug', default=False, action='store_true')
-    args = parser.parse_args()
-
-    bot = Bot(debug=args.debug)
-    bot.run()
-
-    try:
-        app.debug = True
-        app.run(host='0.0.0.0')
-    except (KeyboardInterrupt, SystemExit):
-        bot.exit()
