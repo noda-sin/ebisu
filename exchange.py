@@ -1,13 +1,15 @@
 import os
 import threading
+from datetime import datetime as dt
 
 import ccxt
 import time
 
 class Position:
-    leverage = 1
-    current_qty = 0
-    avg_entry_price = 0
+    leverage        = 1
+    current_qty     = 0
+    avg_entry_price = None
+    unrealised_pnl  = 0
 
 class BitMex:
     def __init__(self, debug=True):
@@ -28,6 +30,15 @@ class BitMex:
 
         self.client = bitmex
 
+    def _convert_datetime(self, dstr):
+        return dt.strptime(dstr, '%Y-%m-%dT%H:%M:%S.%fZ').strftime('%m/%d')
+
+    def wallet_history(self):
+        history = self.client.privateGetUserWalletHistory()
+        history.reverse()
+        return [{'timestamp': self._convert_datetime(h['timestamp']),'walletBalance':h['walletBalance']/100000}
+                for h in history if h['transactStatus'] == 'Completed']
+
     def current_leverage(self):
         return self.current_position().leverage
 
@@ -43,24 +54,24 @@ class BitMex:
         position.leverage = p['leverage']
         position.current_qty = p['currentQty']
         position.avg_entry_price = p['avgEntryPrice']
+        position.unrealised_pnl = p['unrealisedPnl']
 
         print('------------ POS ------------')
         print('Leverage:      ' + str(position.leverage))
         print('Current Qty:   ' + str(position.current_qty))
         print('AvgEntryPrice: ' + str(position.avg_entry_price))
+        print('UnrealisedPnl: ' + str(position.unrealised_pnl))
         print('-----------------------------')
 
         return position
 
     def close_position(self):
-        print('--- Closed Position ---')
         position = self.current_position()
         position_size = position.current_qty
         if position_size == 0:
             return
         side = 'buy' if position_size < 0 else 'sell'
         self.market_limit_order(side=side, size=position_size)
-        print('-----------------------')
 
     def market_last_price(self):
         return self.client.fetch_ticker('BTC/USD')['last']

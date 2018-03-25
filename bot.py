@@ -8,6 +8,15 @@ from exchange import *
 class Bot:
     debug = True
 
+    def market_last_price(self):
+        return self.bitmex.market_last_price()
+
+    def current_position(self):
+        return self.bitmex.current_position()
+
+    def wallet_history(self):
+        return self.bitmex.wallet_history()
+
     def opener_run(self):
         while True:
             try:
