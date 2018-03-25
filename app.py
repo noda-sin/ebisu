@@ -1,7 +1,7 @@
 import argparse
 import json
 
-from flask import Flask, render_template, url_for, request
+from flask import Flask, render_template
 from flask_httpauth import HTTPDigestAuth
 
 from bot import Bot, os
@@ -9,7 +9,6 @@ from bot import Bot, os
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('DEEPMEX_SECRET')
 auth = HTTPDigestAuth()
-
 bot = Bot()
 
 @auth.get_password
@@ -37,7 +36,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-        bot.debug = app.debug = args.debug
+        bot.debug = args.debug
         bot.run()
         app.run(host='0.0.0.0')
     except (KeyboardInterrupt, SystemExit):

@@ -20,11 +20,15 @@ class Bot:
     def opener_run(self):
         while True:
             try:
-                pass
-                # time.sleep(5)
-                # self.bitmex.market_limit_order('buy', 20)
-                # time.sleep(5)
-                # self.bitmex.close_position()
+                if self.bitmex.has_position():
+                    time.sleep(5)
+                    continue
+
+                self.bitmex.market_limit_order('buy', 20)
+                time.sleep(2)
+                self.bitmex.cancel_orders()
+                self.bitmex.close_position()
+                time.sleep(2)
 
                 # if self.bitmex.has_open_orders():
                 #     time.sleep(10)
@@ -77,7 +81,10 @@ class Bot:
         #     time.sleep(10)
 
     def run(self):
-        self.bitmex = BitMex(debug=self.debug)
+        if self.debug:
+            self.bitmex = BitMexStub()
+        else:
+            self.bitmex = BitMex()
 
         opener = threading.Thread(target=self.opener_run)
         opener.daemon = True
