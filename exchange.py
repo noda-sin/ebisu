@@ -1,8 +1,10 @@
+import json
 import os
 import threading
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta
 from multiprocessing import Lock
 
+import bitmex
 import ccxt
 import time
 
@@ -21,23 +23,15 @@ class BitMex:
             apiKey = os.environ.get('BITMEX_TEST_APIKEY')
             secret = os.environ.get('BITMEX_TEST_SECRET')
 
-        bitmex = ccxt.bitmex({
-            'apiKey': apiKey,
-            'secret': secret,
-        })
-
-        if debug:
-            bitmex.urls['api'] = bitmex.urls['test']
-
-        self.client = bitmex
+        self.client = bitmex.bitmex(test=debug, api_key=apiKey, api_secret=secret)
 
     def _convert_datetime(self, dstr):
         return dt.strptime(dstr, '%Y-%m-%dT%H:%M:%S.%fZ').strftime('%m/%d')
 
     def wallet_history(self):
-        history = self.client.privateGetUserWalletHistory()
+        history = self.client.User.User_getWalletHistory(currency='XBt').result()[0]
         history.reverse()
-        return [{'timestamp': self._convert_datetime(h['timestamp']),'walletBalance':h['walletBalance']/100000}
+        return [{'timestamp': h['timestamp'].strftime('%m/%d'),'walletBalance':h['walletBalance']/100000}
                 for h in history if h['transactStatus'] == 'Completed']
 
     def current_leverage(self):
@@ -50,7 +44,7 @@ class BitMex:
         return self.current_position().current_qty != 0
 
     def current_position(self):
-        p = self.client.private_get_position('BTC/USD')[0]
+        p = self.client.Position.Position_get(filter=json.dumps({'symbol': 'XBTUSD'})).result()[0][0]
         position = Position()
         position.leverage = p['leverage']
         position.current_qty = p['currentQty']
@@ -71,16 +65,20 @@ class BitMex:
         position_size = position.current_qty
         if position_size == 0:
             return
-        side = 'buy' if position_size < 0 else 'sell'
-        self.market_limit_order(side=side, size=position_size)
+        self.client.Order.Order_closePosition(symbol='XBTUSD').result()
 
     def market_last_price(self):
-        return self.client.fetch_ticker('BTC/USD')['last']
+        return self._fetch_ticker()['lastPrice']
 
     def _create_order(self, type, side, size, price=0):
-        order = self.client.create_order('BTC/USD', type=type, side=side, price=price, amount=size)
-        print('Create Order: ' + order['info']['ordType'] + ' ' + order['info']['side'] + ': ' +
-              str(order['info']['orderQty']) + ' @ ' + str(order['info']['price']) + ' / ' + order['id'])
+        if type == 'limit':
+            order = self.client.Order.Order_new(symbol='XBTUSD', ordType=type.capitalize(),
+                                                      side=side.capitalize(), price=price, orderQty=size).result()[0]
+        else:
+            order = self.client.Order.Order_new(symbol='XBTUSD', ordType=type.capitalize(),
+                                                side=side.capitalize(), orderQty=size).result()[0]
+        print('Create Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
+              str(order['orderQty']) + ' @ ' + str(order['price']) + ' / ' + order['orderID'])
         return order
 
     def limit_order(self, side, price, size):
@@ -104,19 +102,23 @@ class BitMex:
         return self._create_order(type='market', side=side, size=size)
 
     def _fetch_open_orders(self):
-        orders = self.client.fetch_open_orders()
+        orders = self.client.Order.Order_getOrders(symbol='XBTUSD', filter=json.dumps({'open':True})).result()[0][0]
         return orders
 
+    def _fetch_ticker(self):
+        return self.client.Instrument.Instrument_get(symbol='XBTUSD').result()[0][0]
+
     def cancel_orders(self):
-        orders = self._fetch_open_orders()
+        orders = self.client.Order.Order_cancelAll().result()[0]
         for order in orders:
-            self.client.cancel_order(order['id'])
-            print('Cancel Order: ' + order['info']['ordType'] + ' ' + order['info']['side'] + ': ' +
-                  str(order['info']['orderQty']) + ' @ ' + str(order['info']['price']) + ' / ' + order['id'])
+            print('Cancel Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
+                  str(order['orderQty']) + ' @ ' + str(order['price']))
 
     def fetch_ohlc(self):
-        timest = self.client.fetch_ticker('BTC/USD')['timestamp'] - 50 * 3600000
-        candles = self.client.fetch_ohlcv('BTC/USD', timeframe='1h', since=timest)
+        endTime = self._fetch_ticker()['timestamp']
+        startTime = endTime + timedelta(days=-30)
+        candles = self.client.Trade.Trade_getBucketed(symbol='XBTUSD', binSize='1h',
+                                                      startTime=startTime, endTime=endTime).result()[0]
         return candles[:-1]
 
 class BitMexStub(BitMex):
@@ -176,7 +178,7 @@ class BitMexStub(BitMex):
             price = self.market_last_price()
         order = { 'ordType': type, 'side': side, 'size': size, 'price': price }
         print('Create Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
-              str(order['size']) + ' @ ' + str(order['price']))
+              str(order['size']) + ' @ ' + str(order['price'] + ' / ' + order['orderID']))
         self.lock.acquire()
         self.orders.append(order)
         self.lock.release()
@@ -266,3 +268,18 @@ class BitMexStub(BitMex):
             except Exception as e:
                 print(e)
             time.sleep(4)
+
+if __name__ == '__main__':
+    mex = BitMex(debug=True)
+
+    print(mex.wallet_history())
+    print(mex.market_last_price())
+    print(mex.current_position().current_qty)
+
+    mex.limit_order('buy', 8000, 10)
+    mex.cancel_orders()
+
+    mex.market_order('buy', 10)
+    mex.close_position()
+
+    print(mex.fetch_ohlc())
