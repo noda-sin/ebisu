@@ -98,7 +98,7 @@ class BitMexStub(BitMex):
 
     lock = Lock()
 
-    def __init__(self, starttime, timeframe='1h'):
+    def __init__(self, starttime, timeframe='1h', timerange=30):
         BitMex.__init__(self)
 
         # バックテストをテストを実行する期間とBINサイズ
@@ -106,6 +106,7 @@ class BitMexStub(BitMex):
         self.starttime     = starttime
         self.endtime       = datetime.now()
         self.tf            = timeframe
+        self.tr            = timerange
 
         self._clear_position()
 
@@ -195,7 +196,7 @@ class BitMexStub(BitMex):
         else:
             delta = timedelta(days=1)
 
-        lefttime  = self.starttime - 20 * delta
+        lefttime  = self.starttime - self.tr * delta
         righttime = self.starttime
 
         while righttime <= now:
