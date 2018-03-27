@@ -1,12 +1,13 @@
 import json
 import os
 import threading
-from datetime import datetime as dt, timedelta
+import time
+from datetime import datetime as dt, timedelta, datetime
 from multiprocessing import Lock
 
 import bitmex
-import ccxt
-import time
+import bitmex_websocket
+
 
 class Position:
     leverage        = 1
@@ -15,10 +16,12 @@ class Position:
     unrealised_pnl  = 0
 
 class BitMex:
+
+    listeners = []
+
     def __init__(self, debug=True):
         apiKey = os.environ.get('BITMEX_APIKEY')
         secret = os.environ.get('BITMEX_SECRET')
-
         if debug:
             apiKey = os.environ.get('BITMEX_TEST_APIKEY')
             secret = os.environ.get('BITMEX_TEST_SECRET')
@@ -114,160 +117,149 @@ class BitMex:
             print('Cancel Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
                   str(order['orderQty']) + ' @ ' + str(order['price']))
 
-    def fetch_ohlc(self):
-        endTime = self._fetch_ticker()['timestamp']
-        startTime = endTime + timedelta(days=-30)
+    def fetch_ohlc(self, starttime=(datetime.now()+timedelta(days=-30)), endTime=datetime.now()):
         candles = self.client.Trade.Trade_getBucketed(symbol='XBTUSD', binSize='1h',
-                                                      startTime=startTime, endTime=endTime).result()[0]
+                                                      startTime=starttime, endTime=endTime).result()[0]
         return candles[:-1]
 
+    def on_update(self, func):
+        self.listeners.append(func)
+
 class BitMexStub(BitMex):
-    balance  = 100
-    position = Position()
-    orders   = []
-    history  = []
+    balance   = 100
+
+    history   = []
+
+    current_qty    = 0
+    entry_price    = 0
+    unrealised_pnl = 0
+
     lock = Lock()
 
-    def __init__(self):
-        BitMex.__init__(self, debug=True)
-        deamon = threading.Thread(target=self._crawler_run)
-        deamon.start()
-        self._append_hisotry()
+    def __init__(self, starttime, timeframe='1h'):
+        BitMex.__init__(self)
 
-    def _current_time(self):
-        return dt.now().strftime("%m/%d %H:%M")
+        # バックテストをテストを実行する期間とBINサイズ
+        self.is_processing = True
+        self.starttime     = starttime
+        self.endtime       = datetime.now()
+        self.tf            = timeframe
 
-    def _append_hisotry(self):
-        h = {'timestamp':self._current_time(),'walletBalance':self.balance}
+        self._clear_position()
+
+    def _append_hisotry(self, time, source):
+        # 履歴に保存する
+        h = {
+            'timestamp': time.strftime("%Y/%m/%d %H:%M"),
+            'open' : source['open'],
+            'high' : source['high'],
+            'low'  : source['low'],
+            'close': source['close'],
+            'walletBalance': self.balance
+        }
         self.history.append(h)
 
     def wallet_history(self):
         return self.history
 
     def has_open_orders(self):
-        return len(self.orders) > 0
+        return False
 
     def has_position(self):
-        return self.position.current_qty != 0
-
-    def _print_position(self):
-        position = self.current_position()
-        print('------------ POS ------------')
-        print('Leverage:      ' + str(position.leverage))
-        print('Current Qty:   ' + str(position.current_qty))
-        print('AvgEntryPrice: ' + str(position.avg_entry_price))
-        print('UnrealisedPnl: ' + str(position.unrealised_pnl))
-        print('-----------------------------')
+        return self.current_qty != 0
 
     def current_position(self):
-        return self.position
+        return (self.current_qty, self.entry_price, self.unrealised_pnl)
 
     def close_position(self):
-        position = self.current_position()
-        position_size = position.current_qty
-        if position_size == 0:
-            return
-        last_price = self.market_last_price()
-
-        self._make_position(-position_size, last_price)
-        print('Closed position')
-        self._print_position()
-
-    def _create_order(self, type, side, size, price=0):
-        if side == 'market':
+        if self.current_qty != 0:
             price = self.market_last_price()
-        order = { 'ordType': type, 'side': side, 'size': size, 'price': price }
-        print('Create Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
-              str(order['size']) + ' @ ' + str(order['price'] + ' / ' + order['orderID']))
-        self.lock.acquire()
-        self.orders.append(order)
-        self.lock.release()
-        return order
+            self._make_position(-self.current_qty, price)
+            self._clear_position()
 
-    def limit_order(self, side, price, size):
-        return self._create_order(type='limit', side=side, price=price, size=size)
+    def market_last_price(self):
+        return self.market_price
 
-    def market_limit_order(self, side, size):
-        while True:
-            last_price = self.market_last_price()
-            self.limit_order(side=side, price=last_price, size=size)
-            time.sleep(10)
-            if self.has_open_orders():
-                self.cancel_orders()
-                if not self.has_position():
-                    continue
-                else:
-                    break
-            else:
-                break
-
-    def market_order(self, side, size):
-        return self._create_order(type='market', side=side, size=size)
+    def create_order(self, side, size, price=0, time=datetime.now()):
+        type = 'limit' if price > 0 else 'market'
+        s = size if side == 'buy' else -size
+        p = price if price > 0 else self.market_last_price()
+        order = {'ordType': type, 'side': side, 'size': s, 'price': p}
+        print(str(time) + ' Create Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
+              str(order['size']) + ' @ ' + str(order['price']))
+        self._make_position(s, p, time)
 
     def cancel_orders(self):
-        for order in self.orders:
-            print('Cancel Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
-                  str(order['size']) + ' @ ' + str(order['price']))
+        pass
+
+    def _clear_position(self):
+        self.current_qty = 0
+        self.entry_price = None
+        self.unrealised_pnl = 0
+
+    def _make_position(self, qty, price, time):
         self.lock.acquire()
-        self.orders = []
-        self.lock.release()
 
-    def _make_position(self, qty, price):
-        self.lock.acquire()
+        current_qty   = self.current_qty
+        current_price = 0 if self.entry_price is None else self.entry_price
 
-        old_qty = self.position.current_qty
-        old_price = 0 if self.position.avg_entry_price is None else self.position.avg_entry_price
+        next_qty = current_qty + qty
 
-        new_qty = old_qty + qty
-
-        if (old_qty > 0 and new_qty <= 0) or \
-                (old_qty < 0 and new_qty >= 0): # close
-            profit = (price - old_price) / old_price * old_qty
-            print('Profit: ', profit)
+        if (current_qty > 0 and qty <= 0) or \
+                (current_qty < 0 and qty > 0):
+            profit = (current_price - price) / current_price * current_qty
             self.balance += profit
-            print('Balance: ', self.balance)
-            self._append_hisotry()
 
-        if new_qty == 0:
-            self.position.current_qty = 0
-            self.position.avg_entry_price = None
-            self.position.unrealised_pnl = 0
+        if next_qty == 0:
+            print(str(time) + ' Closed Position @ ' + str(self.balance))
+            self._clear_position()
         else:
-            new_price = (old_price * old_qty + price * qty) / (old_qty + qty)
-            self.position.current_qty = new_qty
-            self.position.avg_entry_price = new_price
-            self.position.unrealised_pnl = 0
+            print(str(time) + ' Entry: ' + str(next_qty) + ' / ' + str(price) + ' @ ' + str(self.balance))
+            self.current_qty    = next_qty
+            self.entry_price    = price
+            self.unrealised_pnl = 0
 
         self.lock.release()
-        self._print_position()
 
     def _crawler_run(self):
-        while True:
+        now = datetime.now()
+
+        if self.tf == '1h':
+            delta = timedelta(hours=1)
+        elif self.tf == '1m':
+            delta = timedelta(minutes=1)
+        elif self.tf == '5m':
+            delta = timedelta(minutes=5)
+        else:
+            delta = timedelta(days=1)
+
+        lefttime  = self.starttime - 20 * delta
+        righttime = self.starttime
+
+        while righttime <= now:
             try:
-                last_price = self.market_last_price()
-                for _, order in enumerate(self.orders):
-                    side = order['side']
-                    size = order['size']
-                    price = order['price']
+                lefttime  += delta
+                righttime += delta
+                source = BitMex.fetch_ohlc(self, starttime=lefttime, endTime=righttime)
+                self.market_price = source[-1]['close']
 
-                    if side == 'buy' and price <= last_price:
-                        self._make_position(size, price)
-                        self.orders.remove(order)
-                        break
-                    elif side == 'sell' and price >= last_price:
-                        self._make_position(-size, price)
-                        self.orders.remove(order)
-                        break
+                for listener in self.listeners:
+                    listener(source[-1]['timestamp'], source)
 
-                if self.position.current_qty != 0:
-                    entry_price = self.position.avg_entry_price
-                    profit = (last_price - entry_price) / entry_price * self.position.current_qty
-                    self.position.unrealised_pnl = profit
-                    self._print_position()
+                self._append_hisotry(time, source[-1])
 
             except Exception as e:
                 print(e)
-            time.sleep(4)
+                time.sleep(10)
+            time.sleep(0.1)
+
+        self.is_processing = False
+
+    def on_update(self, func):
+        self.is_processing = True
+        BitMex.on_update(self, func)
+        crawler = threading.Thread(target=self._crawler_run)
+        crawler.start()
 
 if __name__ == '__main__':
     mex = BitMex(debug=True)

@@ -20,65 +20,54 @@ class Bot:
     def opener_run(self):
         while True:
             try:
-                if self.bitmex.has_position():
-                    time.sleep(5)
+                if self.bitmex.has_open_orders():
+                    time.sleep(10)
                     continue
 
-                self.bitmex.market_limit_order('buy', 20)
-                time.sleep(2)
-                self.bitmex.cancel_orders()
-                self.bitmex.close_position()
-                time.sleep(2)
+                lot = 20
+                source = self.bitmex.fetch_ohlc()
+                strategy = Strategy(source)
 
-                # if self.bitmex.has_open_orders():
-                #     time.sleep(10)
-                #     continue
-                #
-                # lot = 20
-                # source = self.bitmex.fetch_ohlc()
-                # strategy = Strategy(source)
-                #
-                # position = self.bitmex.current_position()
-                # position_size = position.current_qty
-                #
-                # trend = strategy.momentum()
-                #
-                # if up and position_size <= 0:
-                #     if self.has_position():
-                #         self.bitmex.market_limit_order('buy', lot)
-                #     self.bitmex.market_limit_order('buy', lot)
-                # elif dn and position_size >= 0:
-                #     if self.has_position():
-                #         self.bitmex.market_limit_order('sell', lot)
-                #     self.bitmex.market_limit_order('sell', lot)
+                position = self.bitmex.current_position()
+                position_size = position.current_qty
+
+                trend = strategy.momentum()
+
+                if up and position_size <= 0:
+                    if self.has_position():
+                        self.bitmex.market_limit_order('buy', lot)
+                    self.bitmex.market_limit_order('buy', lot)
+                elif dn and position_size >= 0:
+                    if self.has_position():
+                        self.bitmex.market_limit_order('sell', lot)
+                    self.bitmex.market_limit_order('sell', lot)
             except Exception as e:
                 print(e)
             time.sleep(10)
 
     def closer_run(self):
-        pass
-        # while True:
-        #     try:
-        #         if not self.has_position():
-        #             time.sleep(10)
-        #             continue
-        #
-        #         ohlc = self.fetch_ohlc()
-        #         close = np.array([v[CLOSE] for _, v in enumerate(ohlc)])
-        #
-        #         position = self.current_position()
-        #         position_size = position['currentQty']
-        #         position_avg_price = position['avgEntryPrice']
-        #
-        #         if position_size > 0 and close[-1] > position_avg_price + 20:
-        #             print('LOSS CUT !!')
-        #             self.close_position()
-        #         elif position_size < 0 and close[-1] < position_avg_price - 20:
-        #             print('LOSS CUT !!')
-        #             self.close_position()
-        #     except Exception as e:
-        #         print(e)
-        #     time.sleep(10)
+        while True:
+            try:
+                if not self.has_position():
+                    time.sleep(10)
+                    continue
+
+                ohlc = self.fetch_ohlc()
+                close = np.array([v[CLOSE] for _, v in enumerate(ohlc)])
+
+                position = self.current_position()
+                position_size = position['currentQty']
+                position_avg_price = position['avgEntryPrice']
+
+                if position_size > 0 and close[-1] > position_avg_price + 20:
+                    print('LOSS CUT !!')
+                    self.close_position()
+                elif position_size < 0 and close[-1] < position_avg_price - 20:
+                    print('LOSS CUT !!')
+                    self.close_position()
+            except Exception as e:
+                print(e)
+            time.sleep(10)
 
     def run(self):
         if self.debug:

@@ -1,11 +1,6 @@
 import numpy as np
 import talib
 
-OPEN = 1
-HIGH = 2
-LOW = 3
-CLOSE = 4
-
 def sma(source, period):
     return talib.SMA(source, timeperiod=period)
 
@@ -55,12 +50,12 @@ class Strategy:
     _zigzag    = []
 
     def __init__(self, source):
-        self.src   = source
+        self.src     = source
         self.src_len = len(source)
-        self.open  = np.array([v[OPEN]  for _, v in enumerate(source)])
-        self.high  = np.array([v[HIGH]  for _, v in enumerate(source)])
-        self.low   = np.array([v[LOW]   for _, v in enumerate(source)])
-        self.close = np.array([v[CLOSE] for _, v in enumerate(source)])
+        self.open  = np.array([v['open']  for _, v in enumerate(source)])
+        self.high  = np.array([v['high']  for _, v in enumerate(source)])
+        self.low   = np.array([v['low']   for _, v in enumerate(source)])
+        self.close = np.array([v['close'] for _, v in enumerate(source)])
 
     def is_up(self):
         if len(self._is_up) > 0:
