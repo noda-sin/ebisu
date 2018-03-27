@@ -8,13 +8,6 @@ from multiprocessing import Lock
 import bitmex
 import bitmex_websocket
 
-
-class Position:
-    leverage        = 1
-    current_qty     = 0
-    avg_entry_price = None
-    unrealised_pnl  = 0
-
 class BitMex:
 
     listeners = []
@@ -37,72 +30,41 @@ class BitMex:
         return [{'timestamp': h['timestamp'].strftime('%m/%d'),'walletBalance':h['walletBalance']/100000}
                 for h in history if h['transactStatus'] == 'Completed']
 
-    def current_leverage(self):
-        return self.current_position().leverage
-
     def has_open_orders(self):
         return len(self._fetch_open_orders()) > 0
 
     def has_position(self):
-        return self.current_position().current_qty != 0
+        return self.current_position()[0] != 0
 
     def current_position(self):
         p = self.client.Position.Position_get(filter=json.dumps({'symbol': 'XBTUSD'})).result()[0][0]
-        position = Position()
-        position.leverage = p['leverage']
-        position.current_qty = p['currentQty']
-        position.avg_entry_price = p['avgEntryPrice']
-        position.unrealised_pnl = p['unrealisedPnl']
+        return (p['currentQty'], p['avgEntryPrice'], p['unrealisedPnl'])
 
-        print('------------ POS ------------')
-        print('Leverage:      ' + str(position.leverage))
-        print('Current Qty:   ' + str(position.current_qty))
-        print('AvgEntryPrice: ' + str(position.avg_entry_price))
-        print('UnrealisedPnl: ' + str(position.unrealised_pnl))
-        print('-----------------------------')
-
-        return position
-
-    def close_position(self):
-        position = self.current_position()
-        position_size = position.current_qty
-        if position_size == 0:
-            return
-        self.client.Order.Order_closePosition(symbol='XBTUSD').result()
+    def close_position(self, time=datetime.now()):
+        current_qty = self.current_position()[0]
+        if current_qty != 0:
+            self.client.Order.Order_closePosition(symbol='XBTUSD').result()
+            print(str(time) + ' Close Position')
 
     def market_last_price(self):
         return self._fetch_ticker()['lastPrice']
 
-    def _create_order(self, type, side, size, price=0):
-        if type == 'limit':
-            order = self.client.Order.Order_new(symbol='XBTUSD', ordType=type.capitalize(),
-                                                      side=side.capitalize(), price=price, orderQty=size).result()[0]
-        else:
-            order = self.client.Order.Order_new(symbol='XBTUSD', ordType=type.capitalize(),
-                                                side=side.capitalize(), orderQty=size).result()[0]
-        print('Create Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
-              str(order['orderQty']) + ' @ ' + str(order['price']) + ' / ' + order['orderID'])
-        return order
+    def create_order(self, side, size, price=0, time=datetime.now()):
+        p = price if price > 0 else self.market_last_price()
 
-    def limit_order(self, side, price, size):
-        return self._create_order(type='limit', side=side, price=price, size=size)
-
-    def market_limit_order(self, side, size):
         while True:
-            last_price = self.market_last_price()
-            self.limit_order(side=side, price=last_price, size=size)
+            order = self.client.Order.Order_new(symbol='XBTUSD', ordType='Limit',
+                                                side=side.capitalize(), price=p, orderQty=size).result()[0]
             time.sleep(10)
+
             if self.has_open_orders():
                 self.cancel_orders()
                 if not self.has_position():
                     continue
-                else:
-                    break
-            else:
-                break
+            break
 
-    def market_order(self, side, size):
-        return self._create_order(type='market', side=side, size=size)
+        print(str(time) + ' Create Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
+              str(order['orderQty']) + ' @ ' + str(order['price']) + ' / ' + order['orderID'])
 
     def _fetch_open_orders(self):
         orders = self.client.Order.Order_getOrders(symbol='XBTUSD', filter=json.dumps({'open':True})).result()[0][0]
@@ -111,10 +73,10 @@ class BitMex:
     def _fetch_ticker(self):
         return self.client.Instrument.Instrument_get(symbol='XBTUSD').result()[0][0]
 
-    def cancel_orders(self):
+    def cancel_orders(self, time=datetime.now()):
         orders = self.client.Order.Order_cancelAll().result()[0]
         for order in orders:
-            print('Cancel Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
+            print(str(time) + ' Cancel Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
                   str(order['orderQty']) + ' @ ' + str(order['price']))
 
     def fetch_ohlc(self, starttime=(datetime.now()+timedelta(days=-30)), endTime=datetime.now()):

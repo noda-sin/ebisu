@@ -11,7 +11,7 @@ mex = BitMexStub(starttime=starttime, timeframe='1h')
 
 def on_update(time, source):
     strategy = Strategy(source)
-    trend    = strategy.momentum()
+    trend    = strategy.elliott()
 
     if trend == Trend.buy and not mex.current_position()[0] > 0:
         if mex.current_position()[0] < 0:
