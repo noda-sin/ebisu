@@ -6,3 +6,4 @@ bin/
 include/
 lib/
 backtest.csv
+ohlc_*.csv

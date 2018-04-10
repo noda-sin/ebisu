@@ -23,7 +23,7 @@ DEFAULT_BL   = 999999
 DEFAULT_LOT  = 100
 DEFAULT_LEVA = 3
 
-OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "ohlc.csv")
+OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "ohlc_{}.csv")
 
 def highest(source, period):
     return pd.rolling_max(source, period, 1)
@@ -98,6 +98,7 @@ class BitMexStub(BitMex):
     entry_price  = 0
     market_price = 0
 
+    ohlc_df      = None
     now_index    = None
     now_time     = None
 
@@ -137,9 +138,20 @@ class BitMexStub(BitMex):
             self.entry_price = self.market_price
 
     def load_ohlc(self):
-        if os.path.exists(OHLC_FILENAME):
-            self.ohlc_df = pd.read_csv(OHLC_FILENAME)
-            return
+        i = 0
+        if os.path.exists(OHLC_FILENAME.format(i)):
+            while True:
+                filename = OHLC_FILENAME.format(i)
+                if os.path.exists(filename) and self.ohlc_df is None:
+                    print('Load ' + filename)
+                    self.ohlc_df = pd.read_csv(filename)
+                    i += 1
+                elif os.path.exists(filename):
+                    print('Load ' + filename)
+                    self.ohlc_df = pd.concat([self.ohlc_df, pd.read_csv(filename)], ignore_index=True)
+                    i += 1
+                else:
+                    return
 
         starttime = datetime(year=2017, month=1, day=1, hour=0, minute=0)
         endtime   = datetime(year=2018, month=4, day=1, hour=0, minute=0)
@@ -158,13 +170,20 @@ class BitMexStub(BitMex):
 
             if lefttime < endtime and righttime > endtime:
                 righttime = endtime
-                continue
             elif lefttime > endtime:
+                df = pd.DataFrame(list)
+                df.to_csv(OHLC_FILENAME.format(i))
                 break
+
             time.sleep(0.5)
 
-        self.ohlc_df = pd.DataFrame(list)
-        self.ohlc_df.to_csv(OHLC_FILENAME)
+            if len(list) > 2000:
+                df = pd.DataFrame(list)
+                df.to_csv(OHLC_FILENAME.format(i))
+                list = []
+                i += 1
+
+        self.load_ohlc()
 
     def _crawler_run(self):
         source = []
