@@ -23,7 +23,7 @@ DEFAULT_BL   = 999999
 DEFAULT_LOT  = 100
 DEFAULT_LEVA = 3
 
-OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "ohlc_{}.csv")
+OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "ohlc_{}_{}.csv")
 
 def highest(source, period):
     return pd.rolling_max(source, period, 1)
@@ -37,13 +37,24 @@ def stdev(source, period):
 def sma(source, period):
     return pd.rolling_mean(source, period, 1)
 
+def delta(tr='1h'):
+    if tr == '1d':
+        return timedelta(days=1)
+    elif tr == '5m':
+        return timedelta(minutes=5)
+    elif tr == '1m':
+        return timedelta(minutes=1)
+    else:
+        return timedelta(hours=1)
+
 class BitMex:
     listener = None
 
-    def __init__(self, test=True):
+    def __init__(self, test=True, timerange='1h'):
         apiKey = os.environ.get('BITMEX_APIKEY') if test else os.environ.get('BITMEX_TEST_APIKEY')
         secret = os.environ.get('BITMEX_SECRET') if test else os.environ.get('BITMEX_TEST_SECRET')
         self.client = bitmex.bitmex(test=test, api_key=apiKey, api_secret=secret)
+        self.tr     = timerange
 
     def current_position(self):
         return self.client.Position.Position_get(filter=json.dumps({'symbol': 'XBTUSD'})).result()[0][0]['currentQty']
@@ -68,7 +79,7 @@ class BitMex:
                   str(order['orderQty']) + ' @ ' + str(order['price']))
 
     def fetch_ohlc(self, starttime=(datetime.now() + timedelta(days=-30)), endTime=datetime.now()):
-        candles = self.client.Trade.Trade_getBucketed(symbol='XBTUSD', binSize='1h',
+        candles = self.client.Trade.Trade_getBucketed(symbol='XBTUSD', binSize=self.tr,
                                                       startTime=starttime, endTime=endTime).result()[0]
         return candles[:-1]
 
@@ -76,7 +87,7 @@ class BitMex:
         dt_prev = datetime.now()
         while True:
             dt_now = datetime.now()
-            if dt_now - dt_prev < timedelta(hours=1):
+            if dt_now - dt_prev < delta(tr=self.tr):
                 continue
             try:
                 source = self.fetch_ohlc()
@@ -106,8 +117,8 @@ class BitMexStub(BitMex):
     sell_signals = []
     balance_history = []
 
-    def __init__(self):
-        BitMex.__init__(self)
+    def __init__(self, timerange='1h'):
+        BitMex.__init__(self, timerange=timerange)
         self.load_ohlc()
 
     def current_leverage(self):
@@ -139,9 +150,9 @@ class BitMexStub(BitMex):
 
     def load_ohlc(self):
         i = 0
-        if os.path.exists(OHLC_FILENAME.format(i)):
+        if os.path.exists(OHLC_FILENAME.format(self.tr, i)):
             while True:
-                filename = OHLC_FILENAME.format(i)
+                filename = OHLC_FILENAME.format(self.tr, i)
                 if os.path.exists(filename) and self.ohlc_df is None:
                     print('Load ' + filename)
                     self.ohlc_df = pd.read_csv(filename)
@@ -157,29 +168,38 @@ class BitMexStub(BitMex):
         endtime   = datetime(year=2018, month=4, day=1, hour=0, minute=0)
 
         lefttime  = starttime
-        righttime = starttime + 99 * timedelta(hours=1)
+        righttime = starttime + 99 * delta(tr=self.tr)
 
         list = []
         while True:
             print('Fetch ohlc ' + str(lefttime) + ' ... ' + str(righttime))
-            source = BitMex.fetch_ohlc(self, starttime=lefttime, endTime=righttime)
+
+            try:
+                source = BitMex.fetch_ohlc(self, starttime=lefttime, endTime=righttime)
+            except Exception as e:
+                print(e)
+                time.sleep(60)
+                continue
+
             list.extend(source)
 
-            lefttime  = lefttime  + 100 * timedelta(hours=1)
-            righttime = righttime + 100 * timedelta(hours=1)
+            lefttime  = lefttime  + 100 * delta(tr=self.tr)
+            righttime = righttime + 100 * delta(tr=self.tr)
 
             if lefttime < endtime and righttime > endtime:
                 righttime = endtime
             elif lefttime > endtime:
                 df = pd.DataFrame(list)
-                df.to_csv(OHLC_FILENAME.format(i))
+                print('Save ohlc ' + OHLC_FILENAME.format(self.tr, i))
+                df.to_csv(OHLC_FILENAME.format(self.tr, i))
                 break
 
-            time.sleep(0.5)
+            time.sleep(2)
 
-            if len(list) > 2000:
+            if len(list) > 65000:
                 df = pd.DataFrame(list)
-                df.to_csv(OHLC_FILENAME.format(i))
+                print('Save ohlc ' + OHLC_FILENAME.format(self.tr, i))
+                df.to_csv(OHLC_FILENAME.format(self.tr, i))
                 list = []
                 i += 1
 
