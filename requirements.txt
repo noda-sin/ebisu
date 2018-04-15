@@ -7,4 +7,4 @@ pandas
 bitmex
 bitmex-ws
 bravado
-websocket
+websocket-client

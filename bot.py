@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import bitmex
 
+from bitmex_ws import BitMexWs
+
 class Source:
     Open  = 1
     High  = 2
@@ -56,11 +58,13 @@ def change_rate(a, b):
 
 class BitMex:
     listener = None
+    source   = []
 
-    def __init__(self, test=True, timerange='1h'):
-        apiKey = os.environ.get('BITMEX_APIKEY') if test else os.environ.get('BITMEX_TEST_APIKEY')
-        secret = os.environ.get('BITMEX_SECRET') if test else os.environ.get('BITMEX_TEST_SECRET')
+    def __init__(self, test=False, timerange='1h'):
+        apiKey = os.environ.get('BITMEX_TEST_APIKEY') if test else os.environ.get('BITMEX_APIKEY')
+        secret = os.environ.get('BITMEX_TEST_SECRET') if test else os.environ.get('BITMEX_SECRET')
         self.client = bitmex.bitmex(test=test, api_key=apiKey, api_secret=secret)
+        self.ws     = BitMexWs()
         self.tr     = timerange
 
     def current_position(self):
@@ -88,30 +92,29 @@ class BitMex:
             print(str(datetime.now()) + ' Cancel Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
                   str(order['orderQty']) + ' @ ' + str(order['price']))
 
-    def fetch_ohlc(self, starttime=(datetime.now() + timedelta(days=-30)), endTime=datetime.now()):
+    def fetch_ohlc(self, starttime=(datetime.now() + timedelta(days=-20)), endtime=datetime.now()):
         candles = self.client.Trade.Trade_getBucketed(symbol='XBTUSD', binSize=self.tr,
-                                                      startTime=starttime, endTime=endTime).result()[0]
+                                                      startTime=starttime, endTime=endtime).result()[0]
         return candles
 
-    def _crawler_run(self):
-        dt_prev = datetime.now()
-        while True:
-            dt_now = datetime.now()
-            if dt_now - dt_prev < delta(tr=self.tr):
-                continue
-            try:
-                source = self.fetch_ohlc()
-                if self.listener is not None:
-                    self.listener(source)
-            except Exception as e:
-                print(e)
-                continue
-            dt_prev = dt_now
+    def __on_update(self, data):
+        self.source.append(data)
+        self.source.pop(0)
+        print(self.source)
 
     def on_update(self, listener):
         self.listener = listener
-        crawler = threading.Thread(target=self._crawler_run)
-        crawler.start()
+        endtime   = datetime.now() - timedelta(hours=9)
+        starttime = endtime - 20 * delta(tr=self.tr)
+        self.source = self.fetch_ohlc(starttime=starttime, endtime=endtime)
+        print(self.source)
+        self.ws.on_update(key=self.tr, func=self.__on_update)
+
+    def print_result(self):
+        pass
+
+    def __del__(self):
+        self.ws.close()
 
 class BitMexStub(BitMex):
     balance      = DEFAULT_BL
@@ -255,7 +258,7 @@ class BitMexStub(BitMex):
         list = []
         while True:
             try:
-                source = BitMex.fetch_ohlc(self, starttime=lefttime, endTime=righttime)
+                source = BitMex.fetch_ohlc(self, starttime=lefttime, endtime=righttime)
             except Exception as e:
                 print(e)
                 time.sleep(60)
@@ -283,7 +286,7 @@ class BitMexStub(BitMex):
 
         self.load_ohlc()
 
-    def _crawler_run(self):
+    def __crawler_run(self):
         source = []
         for index, row in self.ohlc_df.iterrows():
             source.append((row['timestamp'], row['open'], row['close'], row['high'], row['low']))
@@ -297,9 +300,9 @@ class BitMexStub(BitMex):
 
     def on_update(self, listener):
         self.listener = listener
-        self._crawler_run()
+        self.__crawler_run()
 
-    def result(self):
+    def print_result(self):
         print('#--------------------------------------------------------')
         print('# トレード回数 : {}'.format(self.order_count))
         print('# 勝率 : {} %'.format((self.win_count)/(self.win_count+self.lose_count)*100))
@@ -324,22 +327,31 @@ class BitMexStub(BitMex):
         plt.show()
 
 class Bot:
-    def __init__(self, lot=DEFAULT_LOT, test=True):
+    def __init__(self, lot=DEFAULT_LOT, test=True, params={}):
         self.originallot = lot
         self.is_test = test
+        self.params  = params
         if test:
             self.bitmex = BitMexStub()
         else:
-            self.bitmex = BitMex()
-            
+            self.bitmex = BitMex(timerange='1m')
+
+    def input(self, title, defval):
+        if title in self.params:
+            return self.params[title]
+        else:
+            return defval
+
     def strategy(self, source):
         open  = np.array([v[Source.Open]  for _, v in enumerate(source[:-1])])
         high  = np.array([v[Source.High]  for _, v in enumerate(source[:-1])])
         low   = np.array([v[Source.Low]   for _, v in enumerate(source[:-1])])
         close = np.array([v[Source.Close] for _, v in enumerate(source[:-1])])
 
-        is_up = high[-1] == highest(high, 18)[-1]
-        is_dn = low[-1] == lowest(low, 18)[-1]
+        length = self.input('length', 18)
+
+        is_up = high[-1] == highest(high, length)[-1]
+        is_dn = low[-1] == lowest(low, length)[-1]
 
         pos = self.bitmex.current_position()
         lot = self.originallot
@@ -357,9 +369,8 @@ class Bot:
     def run(self):
         try:
             self.bitmex.on_update(listener=self.strategy)
-            if self.is_test:
-                self.bitmex.result()
-            else:
+            self.bitmex.print_result()
+            if not self.is_test:
                 while True: time.sleep(100)
         except (KeyboardInterrupt, SystemExit):
             self.exit()
