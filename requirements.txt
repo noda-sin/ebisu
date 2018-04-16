@@ -1,10 +1,6 @@
-ccxt
-Flask
-flask-httpauth
 ta-lib
 numpy
 pandas
 bitmex
-bitmex-ws
 bravado
 websocket-client

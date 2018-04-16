@@ -1,0 +1,4 @@
+#!/bin/bash
+cd /home/ec2-user/daikokuten/
+source environment/bin/activate
+supervisord -c supervisord.conf

@@ -3,11 +3,12 @@ import sys
 import time
 
 import numpy as np
-
-from mex import BitMex
 from mex_stub import BitMexStub
 from mex_test import BitMexTest
-from util import highest, lowest, Side
+
+from src.mex import BitMex
+from src.util import highest, lowest, Side
+
 
 class Bot:
     def __init__(self, demo=False, test=False, params={}):

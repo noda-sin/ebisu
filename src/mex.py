@@ -1,9 +1,12 @@
 import json
-from datetime import datetime, timedelta
 import os
+from datetime import datetime, timedelta
+
 import bitmex
-from mex_ws import BitMexWs
-from util import delta
+
+from src.mex_ws import BitMexWs
+from src.util import delta
+
 
 class BitMex:
     listener = None

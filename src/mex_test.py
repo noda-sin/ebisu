@@ -2,10 +2,10 @@ import os
 from datetime import timedelta, datetime, time
 
 import pandas as pd
-
-from mex import BitMex
 from mex_stub import BitMexStub
-from util import Side, change_rate, delta
+
+from src.mex import BitMex
+from src.util import Side, change_rate, delta
 
 OHLC_DIRNAME  = os.path.join(os.path.dirname(__file__), "ohlc/{}")
 OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "ohlc/{}/ohlc_{}.csv")
