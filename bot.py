@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import bitmex
 import numpy as np
 import pandas as pd
+import requests
 
 from bitmex_ws import BitMexWs
 
@@ -22,6 +23,24 @@ DEFAULT_LEVA = 1
 
 OHLC_DIRNAME  = os.path.join(os.path.dirname(__file__), "ohlc/{}")
 OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "ohlc/{}/ohlc_{}.csv")
+
+def lineNotify(message, fileName=None):
+    print(message)
+    url     = 'https://notify-api.line.me/api/notify'
+    apikey  = os.environ.get('LINE_APIKEY')
+    payload = {'message': message}
+    headers = {'Authorization': 'Bearer ' + apikey}
+    if fileName is None:
+        try:
+            requests.post(url, data=payload, headers=headers)
+        except:
+            pass
+    else:
+        try:
+            files = {"imageFile": open(fileName, "rb")}
+            requests.post(url, data=payload, headers=headers, files=files)
+        except:
+            pass
 
 def highest(source, period):
     return pd.rolling_max(source, period, 1)
@@ -178,11 +197,11 @@ class BitMexStub(BitMex):
                     self.max_drowdown = close_rate
 
             self.balance += profit
-            print('{} # Close Position @ {}'.format(self.now_time(), profit))
-            print('{} # Balance @ {}'.format(self.now_time(), self.balance))
+            lineNotify('{} # Close Position @ {}'.format(self.now_time(), profit))
+            lineNotify('{} # Balance @ {}'.format(self.now_time(), self.balance))
 
         if next_qty != 0:
-            print('{} # Create Order : ({}, {}) @ {}'.format(self.now_time(), side, size, price))
+            lineNotify('{} # Create Order : ({}, {}) @ {}'.format(self.now_time(), side, size, price))
 
             self.current_qty = next_qty
             self.entry_price = price
