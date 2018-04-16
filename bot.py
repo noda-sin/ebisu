@@ -2,20 +2,15 @@ import argparse
 import json
 import os
 import sys
-import threading
 import time
 from datetime import datetime, timedelta
+
+import bitmex
 import numpy as np
 import pandas as pd
-import bitmex
 
 from bitmex_ws import BitMexWs
 
-class Source:
-    Open  = 1
-    High  = 2
-    Low  = 3
-    Close = 4
 
 class Side:
     Long  = "long"
@@ -58,7 +53,6 @@ def change_rate(a, b):
 
 class BitMex:
     listener = None
-    source   = []
 
     def __init__(self, test=False, timerange='1h'):
         apiKey = os.environ.get('BITMEX_TEST_APIKEY') if test else os.environ.get('BITMEX_APIKEY')
@@ -67,15 +61,21 @@ class BitMex:
         self.ws     = BitMexWs()
         self.tr     = timerange
 
-    def current_position(self):
+    def now_time(self):
+        return datetime.now()
+
+    def position_qty(self):
         return self.client.Position.Position_get(filter=json.dumps({'symbol': 'XBTUSD'})).result()[0][0]['currentQty']
 
-    def current_entryprice(self):
+    def position_price(self):
         return self.client.Position.Position_get(filter=json.dumps({'symbol': 'XBTUSD'})).result()[0][0]['avgEntryPrice']
 
-    def close_position(self, time=datetime.now()):
+    def market_price(self):
+        return self.client.Instrument.Instrument_get(symbol='XBTUSD').result()[0][0]['lastPrice']
+
+    def close_position(self):
         self.client.Order.Order_closePosition(symbol='XBTUSD').result()
-        print(str(time) + ' Close Position')
+        print(str(self.now_time()) + ' Close Position')
 
     def trade_fee(self):
         return 0.075/100
@@ -83,31 +83,29 @@ class BitMex:
     def entry(self, side, size):
         order = self.client.Order.Order_new(symbol='XBTUSD', ordType='Market',
                                     side=side.capitalize(), orderQty=size).result()[0]
-        print(str(datetime.now()) + ' Create Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
+        print(str(self.now_time()) + ' Create Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
               str(order['orderQty']) + ' @ ' + str(order['price']) + ' / ' + order['orderID'])
 
     def cancel_orders(self):
         orders = self.client.Order.Order_cancelAll().result()[0]
         for order in orders:
-            print(str(datetime.now()) + ' Cancel Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
+            print(str(self.now_time()) + ' Cancel Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
                   str(order['orderQty']) + ' @ ' + str(order['price']))
 
-    def fetch_ohlc(self, starttime=(datetime.now() + timedelta(days=-20)), endtime=datetime.now()):
+    def fetch_ohlc(self, starttime, endtime):
         candles = self.client.Trade.Trade_getBucketed(symbol='XBTUSD', binSize=self.tr,
                                                       startTime=starttime, endTime=endtime).result()[0]
         return candles
 
     def __on_update(self, data):
-        self.source.append(data)
-        self.source.pop(0)
-        print(self.source)
+        if self.listener is not None:
+            endtime   = datetime.now() - timedelta(hours=9)
+            starttime = endtime - 20 * delta(tr=self.tr)
+            source    = self.fetch_ohlc(starttime=starttime, endtime=endtime)
+            self.listener(source)
 
     def on_update(self, listener):
         self.listener = listener
-        endtime   = datetime.now() - timedelta(hours=9)
-        starttime = endtime - 20 * delta(tr=self.tr)
-        self.source = self.fetch_ohlc(starttime=starttime, endtime=endtime)
-        print(self.source)
         self.ws.on_update(key=self.tr, func=self.__on_update)
 
     def print_result(self):
@@ -120,11 +118,7 @@ class BitMexStub(BitMex):
     balance      = DEFAULT_BL
     current_qty  = 0
     entry_price  = 0
-    market_price = 0
 
-    ohlc_df      = None
-    now_index    = None
-    now_time     = None
     order_count  = 0
 
     win_count    = 0
@@ -135,24 +129,19 @@ class BitMexStub(BitMex):
 
     max_drowdown = 0
 
-    buy_signals  = []
-    sell_signals = []
-    balance_history = []
-
     def __init__(self, timerange='1h'):
         BitMex.__init__(self, timerange=timerange)
-        self.load_ohlc()
 
     def current_leverage(self):
         return DEFAULT_LEVA
 
-    def current_position(self):
+    def position_qty(self):
         return self.current_qty
 
-    def current_entryprice(self):
+    def position_price(self):
         return self.entry_price
 
-    def close_position(self, time=datetime.now()):
+    def close_position(self):
         pos = self.current_qty
         if pos > 0:
             self.entry(side=Side.Short, size=pos)
@@ -160,11 +149,11 @@ class BitMexStub(BitMex):
             self.entry(side=Side.Long, size=-1*pos)
 
     def entry(self, side, size):
+        price = self.market_price()
+
         if side == Side.Long:
-            self.buy_signals.append(self.now_index)
             order_qty = size
         else:
-            self.sell_signals.append(self.now_index)
             order_qty = -size
 
         next_qty = self.current_qty + order_qty
@@ -172,11 +161,11 @@ class BitMexStub(BitMex):
         if (self.current_qty > 0 and order_qty <= 0) or \
                 (self.current_qty < 0 and order_qty > 0):
 
-            if self.entry_price > self.market_price:
-                close_rate = (self.entry_price - self.market_price) / self.market_price - self.trade_fee()
+            if self.entry_price > price:
+                close_rate = (self.entry_price - price) / price - self.trade_fee()
                 profit = -1 * self.current_qty * self.current_qty * close_rate
             else:
-                close_rate = (self.market_price - self.entry_price) / self.entry_price - self.trade_fee()
+                close_rate = (price - self.entry_price) / self.entry_price - self.trade_fee()
                 profit = self.current_qty * self.current_qty * close_rate
 
             if profit > 0:
@@ -189,15 +178,46 @@ class BitMexStub(BitMex):
                     self.max_drowdown = close_rate
 
             self.balance += profit
-            print('{} # Close Position @ {} {} {} {}'.format(self.order_count, side, self.now_time, self.market_price, profit))
+            print('{} # Close Position @ {}'.format(self.now_time(), profit))
+            print('{} # Balance @ {}'.format(self.now_time(), self.balance))
 
         if next_qty != 0:
-            print('{} # Create Order   @ {} {} {}'.format(self.order_count, side, self.now_time, self.market_price))
+            print('{} # Create Order : ({}, {}) @ {}'.format(self.now_time(), side, size, price))
 
             self.current_qty = next_qty
-            self.entry_price = self.market_price
+            self.entry_price = price
 
         self.order_count+=1
+
+class BitMexTest(BitMexStub):
+    price        = 0
+
+    ohlc_df      = None
+    index        = None
+    time         = None
+    order_count  = 0
+
+    buy_signals  = []
+    sell_signals = []
+    balance_history = []
+
+    def __init__(self, timerange='1h'):
+        BitMexStub.__init__(self, timerange=timerange)
+        self.load_ohlc()
+
+    def market_price(self):
+        return self.price
+
+    def now_time(self):
+        return self.time
+
+    def entry(self, side, size):
+        BitMexStub.entry(self, side, size)
+
+        if side == Side.Long:
+            self.buy_signals.append(self.index)
+        else:
+            self.sell_signals.append(self.index)
 
     def clean_ohlc(self):
         source = []
@@ -289,10 +309,10 @@ class BitMexStub(BitMex):
     def __crawler_run(self):
         source = []
         for index, row in self.ohlc_df.iterrows():
-            source.append((row['timestamp'], row['open'], row['close'], row['high'], row['low']))
-            self.market_price = row['open']
-            self.now_time     = row['timestamp'] + timedelta(hours=9)
-            self.now_index    = index
+            source.append(row)
+            self.price        = row['open']
+            self.time         = row['timestamp'] + timedelta(hours=9)
+            self.index        = index
             if len(source) > 20:
                 self.listener(source)
                 source.pop(0)
@@ -327,14 +347,17 @@ class BitMexStub(BitMex):
         plt.show()
 
 class Bot:
-    def __init__(self, lot=DEFAULT_LOT, test=True, params={}):
+    def __init__(self, lot=DEFAULT_LOT, demo=False, test=False, params={}):
         self.originallot = lot
         self.is_test = test
         self.params  = params
-        if test:
-            self.bitmex = BitMexStub()
+
+        if demo:
+            self.bitmex = BitMexStub(timerange='1m')
+        elif test:
+            self.bitmex = BitMexTest()
         else:
-            self.bitmex = BitMex(timerange='1m')
+            self.bitmex = BitMex()
 
     def input(self, title, defval):
         if title in self.params:
@@ -343,17 +366,17 @@ class Bot:
             return defval
 
     def strategy(self, source):
-        open  = np.array([v[Source.Open]  for _, v in enumerate(source[:-1])])
-        high  = np.array([v[Source.High]  for _, v in enumerate(source[:-1])])
-        low   = np.array([v[Source.Low]   for _, v in enumerate(source[:-1])])
-        close = np.array([v[Source.Close] for _, v in enumerate(source[:-1])])
+        open  = np.array([v['open']  for _, v in enumerate(source[:-1])])
+        high  = np.array([v['high']  for _, v in enumerate(source[:-1])])
+        low   = np.array([v['low']   for _, v in enumerate(source[:-1])])
+        close = np.array([v['close'] for _, v in enumerate(source[:-1])])
 
         length = self.input('length', 18)
 
         is_up = high[-1] == highest(high, length)[-1]
         is_dn = low[-1] == lowest(low, length)[-1]
 
-        pos = self.bitmex.current_position()
+        pos = self.bitmex.position_qty()
         lot = self.originallot
 
         # エントリー
@@ -382,8 +405,9 @@ class Bot:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This is trading script on bitmex')
-    parser.add_argument('--debug', default=False, action='store_true')
+    parser.add_argument('--test', default=False, action='store_true')
+    parser.add_argument('--demo', default=False, action='store_true')
     args = parser.parse_args()
 
-    bot = Bot(test=args.debug)
+    bot = Bot(demo=args.demo, test=args.test)
     bot.run()

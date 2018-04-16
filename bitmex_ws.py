@@ -13,13 +13,17 @@ class BitMexWs:
         endpoint = 'wss://www.bitmex.com/realtime?subscribe=tradeBin1m:XBTUSD,' \
                         'tradeBin5m:XBTUSD,tradeBin1h:XBTUSD,tradeBin1d:XBTUSD'
         self.ws = websocket.WebSocketApp(endpoint,
-                             on_message=self._on_message,
+                             on_message=self.__on_message,
                              on_close=self.__on_close)
-        self.wst = threading.Thread(target=lambda: self.ws.run_forever())
+        self.wst = threading.Thread(target=self.__start)
         self.wst.daemon = True
         self.wst.start()
+        
+    def __start(self):
+        while True:
+            self.ws.run_forever()
 
-    def _on_message(self, ws, message):
+    def __on_message(self, ws, message):
         data = json.loads(message)
         if 'table' in data:
             if len(data['data']) <= 0:
