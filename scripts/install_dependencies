@@ -1,4 +1,5 @@
 #!/bin/bash
+
 yum install -y gcc
 cd /tmp
 wget -O ta-lib-0.4.0-src.tar.gz http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
@@ -6,10 +7,10 @@ tar xvzf ta-lib-0.4.0-src.tar.gz
 cd ta-lib
 ./configure --prefix=/usr
 make & make install
+
 easy_install pip
-pip install virtualenv
 cd /home/ec2-user/daikokuten
-virtualenv environment
-source environment/bin/activate
 pip install -r requirements.txt
-pip install supervisor
+
+chkconfig --add daikokuten
+chkconfig daikokuten on

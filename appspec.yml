@@ -1,10 +1,20 @@
 version: 0.0
 os: linux
 files:
- - source: /src
+  - source: daikokuten
+   destination: /etc/init.d/
+  - source: /src
    destination: /home/ec2-user/daikokuten
- - source: requirements.txt
+  - source: requirements.txt
    destination: /home/ec2-user/daikokuten
+permissions:
+  - object: /etc/init.d/
+    pattern: "daikokuten"
+    owner: root
+    group: root
+    mode: 755
+    type:
+      - file
 hooks:
   AfterInstall:
     - location: scripts/install_dependencies
