@@ -1,16 +1,16 @@
 # coding: UTF-8
 
 import os
-from datetime import timedelta, datetime, time
-
+from datetime import timedelta, datetime
+import time
 import pandas as pd
 from mex_stub import BitMexStub
 
-from src.mex import BitMex
-from src.util import Side, change_rate, delta
+from mex import BitMex
+from util import Side, change_rate, delta
 
-OHLC_DIRNAME  = os.path.join(os.path.dirname(__file__), "ohlc/{}")
-OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "ohlc/{}/ohlc_{}.csv")
+OHLC_DIRNAME  = os.path.join(os.path.dirname(__file__), "../ohlc/{}")
+OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}/ohlc_{}.csv")
 
 class BitMexTest(BitMexStub):
     price        = 0

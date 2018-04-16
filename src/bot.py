@@ -8,8 +8,8 @@ import numpy as np
 from mex_stub import BitMexStub
 from mex_test import BitMexTest
 
-from src.mex import BitMex
-from src.util import highest, lowest, Side
+from mex import BitMex
+from util import highest, lowest, Side
 
 
 class Bot:

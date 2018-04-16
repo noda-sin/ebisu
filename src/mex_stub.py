@@ -1,7 +1,7 @@
 # coding: UTF-8
 
-from src.mex import BitMex
-from src.util import Side, lineNotify
+from mex import BitMex
+from util import Side, lineNotify
 
 class BitMexStub(BitMex):
     balance      = 200

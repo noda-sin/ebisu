@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 
 import bitmex
 
-from src.mex_ws import BitMexWs
-from src.util import delta
+from mex_ws import BitMexWs
+from util import delta
 
 
 class BitMex:
