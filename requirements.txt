@@ -1,5 +1,7 @@
-ta-lib
+Flask
+gunicorn
 numpy
+ta-lib
 pandas
 bitmex
 bravado

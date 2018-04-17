@@ -5,12 +5,19 @@ import sys
 import time
 
 import numpy as np
+from flask import Flask
+
 from mex_stub import BitMexStub
 from mex_test import BitMexTest
 
 from mex import BitMex
 from util import highest, lowest, Side
 
+app = Flask(__name__)
+
+@app.route('/healty', methods=['GET'])
+def healty():
+    return 'ok'
 
 class Bot:
     def __init__(self, demo=False, test=False, params={}):
@@ -59,7 +66,7 @@ class Bot:
             self.bitmex.on_update(listener=self.strategy)
             self.bitmex.print_result()
             if not self.is_test:
-                while True: time.sleep(100)
+                app.run(host='0.0.0.0')
         except (KeyboardInterrupt, SystemExit):
             self.exit()
 
