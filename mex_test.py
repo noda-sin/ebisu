@@ -9,8 +9,8 @@ from mex_stub import BitMexStub
 from mex import BitMex
 from util import Side, change_rate, delta
 
-OHLC_DIRNAME  = os.path.join(os.path.dirname(__file__), "../ohlc/{}")
-OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}/ohlc_{}.csv")
+OHLC_DIRNAME  = os.path.join(os.path.dirname(__file__), "ohlc/{}")
+OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "ohlc/{}/ohlc_{}.csv")
 
 class BitMexTest(BitMexStub):
     price        = 0
