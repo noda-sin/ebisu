@@ -11,16 +11,16 @@ class Side:
     Short = "short"
 
 def highest(source, period):
-    return pd.Series(source).rolling(window=period).max()
+    return pd.Series(source).rolling(period).max()
 
 def lowest(source, period):
-    return pd.Series(source).rolling(window=period).min()
+    return pd.Series(source).rolling(period).min()
 
 def stdev(source, period):
-    return pd.Series(source).rolling(window=period).std()
+    return pd.Series(source).rolling(period).std()
 
 def sma(source, period):
-    return pd.Series(source).rolling(window=period).mean()
+    return pd.Series(source).rolling(period).mean()
 
 def delta(tr='1h'):
     if tr == '1d':

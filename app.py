@@ -3,6 +3,7 @@
 import argparse
 import sys
 import time
+import os
 
 import numpy as np
 from flask import Flask
@@ -38,16 +39,16 @@ class Bot:
             return defval
 
     def strategy(self, source):
-        open  = np.array([v['open']  for _, v in enumerate(source[:-1])])
-        high  = np.array([v['high']  for _, v in enumerate(source[:-1])])
-        low   = np.array([v['low']   for _, v in enumerate(source[:-1])])
-        close = np.array([v['close'] for _, v in enumerate(source[:-1])])
+        open  = [v['open']  for _, v in enumerate(source[:-1])]
+        high  = [v['high']  for _, v in enumerate(source[:-1])]
+        low   = [v['low']   for _, v in enumerate(source[:-1])]
+        close = [v['close'] for _, v in enumerate(source[:-1])]
 
         length = self.input('length', 18)
         lot = self.bitmex.wallet_balance() / 20
 
-        is_up = high[-1] == highest(high, length)[-1]
-        is_dn = low[-1] == lowest(low, length)[-1]
+        is_up = (high[-1] == highest(high, length).iloc[-1])
+        is_dn = (low[-1]  == lowest(low, length).iloc[-1])
 
         pos = self.bitmex.position_qty()
 
@@ -66,7 +67,8 @@ class Bot:
             self.bitmex.on_update(listener=self.strategy)
             self.bitmex.print_result()
             if not self.is_test:
-                app.run(host='0.0.0.0')
+                port = int(os.environ.get('PORT')) or 5000
+                app.run(host='0.0.0.0', port=port)
         except (KeyboardInterrupt, SystemExit):
             self.exit()
 

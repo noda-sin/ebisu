@@ -16,6 +16,7 @@ class BitMexWs:
                         'tradeBin5m:XBTUSD,tradeBin1h:XBTUSD,tradeBin1d:XBTUSD'
         self.ws = websocket.WebSocketApp(endpoint,
                              on_message=self.__on_message,
+                             on_error=self.__on_error,
                              on_close=self.__on_close)
         self.wst = threading.Thread(target=self.__start)
         self.wst.daemon = True
@@ -25,18 +26,24 @@ class BitMexWs:
         while True:
             self.ws.run_forever()
 
-    def __on_message(self, ws, message):
-        data = json.loads(message)
-        if 'table' in data:
-            if len(data['data']) <= 0:
-                return
+    def __on_error(self, ws, message):
+        print(message)
 
-            table = data['table']
-            ohlc  = data['data'][0]
-            ohlc['timestamp'] = datetime.strptime(ohlc['timestamp'][:-5], '%Y-%m-%dT%H:%M:%S')
-            
-            if table in self.handlers:
-                self.handlers[table](ohlc)
+    def __on_message(self, ws, message):
+        try:
+            data = json.loads(message)
+            if 'table' in data:
+                if len(data['data']) <= 0:
+                    return
+
+                table = data['table']
+                ohlc  = data['data'][0]
+                ohlc['timestamp'] = datetime.strptime(ohlc['timestamp'][:-5], '%Y-%m-%dT%H:%M:%S')
+
+                if table in self.handlers:
+                    self.handlers[table](ohlc)
+        except Exception as e:
+            print(e)
 
     def __on_close(self, ws):
         if 'close' in self.handlers:
