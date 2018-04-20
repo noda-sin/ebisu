@@ -13,6 +13,8 @@ OHLC_DIRNAME  = os.path.join(os.path.dirname(__file__), "ohlc/{}")
 OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "ohlc/{}/ohlc_{}.csv")
 
 class BitMexTest(BitMexStub):
+    periods      = 20
+
     price        = 0
 
     ohlc_df      = None
@@ -26,10 +28,11 @@ class BitMexTest(BitMexStub):
 
     start_balance = 0
 
-    def __init__(self, timerange='1h'):
+    def __init__(self, timerange='1h', periods=20):
         BitMexStub.__init__(self, timerange=timerange, notify=False)
         self.load_ohlc()
         self.start_balance = self.wallet_balance()
+        self.periods = periods
 
     def market_price(self):
         return self.price
@@ -90,7 +93,7 @@ class BitMexTest(BitMexStub):
                     self.ohlc_df = pd.concat([self.ohlc_df, pd.read_csv(filename)], ignore_index=True)
                     i += 1
                 else:
-                    self.clean_ohlc()
+                    # self.clean_ohlc()
                     return
 
         os.makedirs(OHLC_DIRNAME.format(self.tr))
@@ -137,9 +140,9 @@ class BitMexTest(BitMexStub):
         for index, row in self.ohlc_df.iterrows():
             source.append(row)
             self.price        = row['open']
-            self.time         = row['timestamp'] + timedelta(hours=9)
+            self.time         = row['timestamp']
             self.index        = index
-            if len(source) > 20:
+            if len(source) > self.periods:
                 self.listener(source)
                 source.pop(0)
             self.balance_history.append(self.balance-self.start_balance)

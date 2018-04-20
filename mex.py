@@ -9,7 +9,6 @@ import bitmex
 from mex_ws import BitMexWs
 from util import delta
 
-
 class BitMex:
     listener = None
 

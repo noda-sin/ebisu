@@ -5,22 +5,27 @@ from datetime import timedelta
 
 import requests
 import pandas as pd
+import talib
+import numpy as np
 
 class Side:
     Long  = "long"
     Short = "short"
 
 def highest(source, period):
-    return pd.Series(source).rolling(period).max()
+    return pd.Series(source).rolling(period).max().as_matrix()
 
 def lowest(source, period):
-    return pd.Series(source).rolling(period).min()
+    return pd.Series(source).rolling(period).min().as_matrix()
 
 def stdev(source, period):
-    return pd.Series(source).rolling(period).std()
+    return pd.Series(source).rolling(period).std().as_matrix()
 
 def sma(source, period):
-    return pd.Series(source).rolling(period).mean()
+    return pd.Series(source).rolling(period).mean().as_matrix()
+
+def ema(source, period):
+    return talib.EMA(np.array(source), period)
 
 def delta(tr='1h'):
     if tr == '1d':
