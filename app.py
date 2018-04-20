@@ -1,17 +1,8 @@
 # coding: UTF-8
 
 import argparse
-import os
-
-from flask import Flask
 
 from src.factory import BotFactory
-
-app = Flask(__name__)
-
-@app.route('/healty', methods=['GET'])
-def healty():
-    return 'ok'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This is trading script on bitmex')
@@ -26,7 +17,7 @@ if __name__ == '__main__':
 
     if not args.test:
         try:
-            port = int(os.environ.get('PORT')) or 5000
-            app.run(host='0.0.0.0', port=port)
+            while True:
+                pass
         except (KeyboardInterrupt, SystemExit):
             bot.exit()
