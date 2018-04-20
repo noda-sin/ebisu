@@ -7,7 +7,7 @@ from util import Side, highest, lowest, ema, stdev, sma
 class Dotenkun(Bot):
 
     def __init__(self, demo=False, test=False, params={}):
-        Bot.__init__(self, demo=demo, test=test, params=params)
+        Bot.__init__(self, demo=demo, test=test, timerange='1h', duration=20, params=params)
 
     def strategy(self, source):
         high = [v['high'] for _, v in enumerate(source[:-1])]
@@ -34,7 +34,7 @@ class Dotenkun(Bot):
 class BB(Bot):
 
     def __init__(self, demo=False, test=False, params={}):
-        Bot.__init__(self, demo=demo, test=test, params=params)
+        Bot.__init__(self, demo=demo, test=test, timerange='5m', duration=50, params=params)
 
     def strategy(self, source):
         close = [v['close'] for _, v in enumerate(source[:-1])]
@@ -58,8 +58,6 @@ class BB(Bot):
         lower = ((sma(macd, bb_len)) - (std * dev))
 
         band = upper - lower
-
-        print(band[-1])
 
         is_up = lower[-1] < macd[-1] and \
                 macd[-1] < upper[-1] and \

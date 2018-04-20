@@ -19,8 +19,8 @@ class BitMexStub(BitMex):
 
     max_drowdown = 0
 
-    def __init__(self, timerange='1h', notify=True):
-        BitMex.__init__(self, timerange=timerange)
+    def __init__(self, timerange='1h', duration=30, notify=True):
+        BitMex.__init__(self, timerange=timerange, duration=duration)
         self.notify = notify
 
     def wallet_balance(self):

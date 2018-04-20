@@ -7,15 +7,15 @@ from mex_stub import BitMexStub
 from mex_test import BitMexTest
 
 class Bot:
-    def __init__(self, demo=False, test=False, params={}):
+    def __init__(self, demo=False, test=False, timerange='1h', duration=20, params={}):
         self.params  = params
 
         if demo:
-            self.bitmex = BitMexStub()
+            self.bitmex = BitMexStub(timerange=timerange, duration=duration)
         elif test:
-            self.bitmex = BitMexTest()
+            self.bitmex = BitMexTest(timerange=timerange, duration=duration)
         else:
-            self.bitmex = BitMex()
+            self.bitmex = BitMex(timerange=timerange, duration=duration)
 
     def input(self, title, defval):
         if title in self.params:

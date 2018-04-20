@@ -13,8 +13,6 @@ OHLC_DIRNAME  = os.path.join(os.path.dirname(__file__), "ohlc/{}")
 OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "ohlc/{}/ohlc_{}.csv")
 
 class BitMexTest(BitMexStub):
-    periods      = 20
-
     price        = 0
 
     ohlc_df      = None
@@ -28,11 +26,10 @@ class BitMexTest(BitMexStub):
 
     start_balance = 0
 
-    def __init__(self, timerange='1h', periods=20):
-        BitMexStub.__init__(self, timerange=timerange, notify=False)
+    def __init__(self, timerange='1h', duration=30):
+        BitMexStub.__init__(self, timerange=timerange, duration=duration, notify=False)
         self.load_ohlc()
         self.start_balance = self.wallet_balance()
-        self.periods = periods
 
     def market_price(self):
         return self.price
@@ -93,13 +90,19 @@ class BitMexTest(BitMexStub):
                     self.ohlc_df = pd.concat([self.ohlc_df, pd.read_csv(filename)], ignore_index=True)
                     i += 1
                 else:
-                    # self.clean_ohlc()
+                    self.clean_ohlc()
                     return
 
         os.makedirs(OHLC_DIRNAME.format(self.tr))
 
-        starttime = datetime(year=2017, month=1, day=1, hour=0, minute=0)
-        endtime   = datetime(year=2018, month=4, day=1, hour=0, minute=0)
+        if self.tr == '1d' or self.tr == '1h':
+            starttime = datetime(year=2017, month=1, day=1, hour=0, minute=0)
+        elif self.tr == '5m':
+            starttime = datetime.now() - timedelta(days=31*3)
+        else:
+            starttime = datetime.now() - timedelta(days=31)
+
+        endtime = datetime.now()
 
         lefttime  = starttime
         righttime = starttime + 99 * delta(tr=self.tr)
@@ -107,6 +110,7 @@ class BitMexTest(BitMexStub):
         list = []
         while True:
             try:
+                print('Load ohlc: ' + str(lefttime))
                 source = BitMex.fetch_ohlc(self, starttime=lefttime, endtime=righttime)
             except Exception as e:
                 print(e)
@@ -142,7 +146,7 @@ class BitMexTest(BitMexStub):
             self.price        = row['open']
             self.time         = row['timestamp']
             self.index        = index
-            if len(source) > self.periods:
+            if len(source) > self.duration:
                 self.listener(source)
                 source.pop(0)
             self.balance_history.append(self.balance-self.start_balance)
