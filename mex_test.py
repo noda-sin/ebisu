@@ -26,8 +26,8 @@ class BitMexTest(BitMexStub):
 
     start_balance = 0
 
-    def __init__(self, timerange='1h', duration=30):
-        BitMexStub.__init__(self, timerange=timerange, duration=duration, notify=False)
+    def __init__(self, tr='1h', periods=30):
+        BitMexStub.__init__(self, tr=tr, periods=periods, notify=False)
         self.load_ohlc()
         self.start_balance = self.wallet_balance()
 
@@ -146,7 +146,7 @@ class BitMexTest(BitMexStub):
             self.price        = row['open']
             self.time         = row['timestamp']
             self.index        = index
-            if len(source) > self.duration:
+            if len(source) > self.periods:
                 self.listener(source)
                 source.pop(0)
             self.balance_history.append(self.balance-self.start_balance)

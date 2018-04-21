@@ -7,7 +7,7 @@ from util import Side, highest, lowest, ema, stdev, sma
 class Dotenkun(Bot):
 
     def __init__(self, demo=False, test=False, params={}):
-        Bot.__init__(self, demo=demo, test=test, timerange='1h', duration=20, params=params)
+        Bot.__init__(self, demo=demo, test=test, tr='1h', periods=20, params=params)
 
     def strategy(self, source):
         high = [v['high'] for _, v in enumerate(source[:-1])]
@@ -34,7 +34,7 @@ class Dotenkun(Bot):
 class BB(Bot):
 
     def __init__(self, demo=False, test=False, params={}):
-        Bot.__init__(self, demo=demo, test=test, timerange='5m', duration=50, params=params)
+        Bot.__init__(self, demo=demo, test=test, tr='5m', periods=50, params=params)
 
     def strategy(self, source):
         close = [v['close'] for _, v in enumerate(source[:-1])]

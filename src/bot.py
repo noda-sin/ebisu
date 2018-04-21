@@ -7,15 +7,15 @@ from mex_stub import BitMexStub
 from mex_test import BitMexTest
 
 class Bot:
-    def __init__(self, demo=False, test=False, timerange='1h', duration=20, params={}):
+    def __init__(self, demo=False, test=False, tr='1h', periods=20, params={}):
         self.params  = params
 
         if demo:
-            self.bitmex = BitMexStub(timerange=timerange, duration=duration)
+            self.bitmex = BitMexStub(tr=tr, periods=periods)
         elif test:
-            self.bitmex = BitMexTest(timerange=timerange, duration=duration)
+            self.bitmex = BitMexTest(tr=tr, periods=periods)
         else:
-            self.bitmex = BitMex(timerange=timerange, duration=duration)
+            self.bitmex = BitMex(tr=tr, periods=periods)
 
     def input(self, title, defval):
         if title in self.params:
@@ -30,7 +30,7 @@ class Bot:
         self.bitmex.on_update(listener=self.strategy)
         self.bitmex.print_result()
 
-    def exit(self):
+    def close(self):
         self.bitmex.cancel_orders()
         self.bitmex.close_position()
         sys.exit()

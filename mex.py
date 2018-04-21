@@ -12,13 +12,13 @@ from util import delta
 class BitMex:
     listener = None
 
-    def __init__(self, test=False, timerange='1h', duration=30):
+    def __init__(self, test=False, tr='1h', periods=30):
         apiKey = os.environ.get('BITMEX_TEST_APIKEY') if test else os.environ.get('BITMEX_APIKEY')
         secret = os.environ.get('BITMEX_TEST_SECRET') if test else os.environ.get('BITMEX_SECRET')
         self.client   = bitmex.bitmex(test=test, api_key=apiKey, api_secret=secret)
         self.ws       = BitMexWs()
-        self.tr       = timerange
-        self.duration = duration
+        self.tr       = tr
+        self.periods  = periods
 
     def wallet_balance(self):
         pass
@@ -62,7 +62,7 @@ class BitMex:
     def __on_update(self, data):
         if self.listener is not None:
             endtime   = datetime.now() - timedelta(hours=9)
-            starttime = endtime - self.duration * delta(tr=self.tr)
+            starttime = endtime - self.periods * delta(tr=self.tr)
             source    = self.fetch_ohlc(starttime=starttime, endtime=endtime)
             self.listener(source)
 
