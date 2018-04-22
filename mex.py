@@ -2,7 +2,9 @@
 
 import json
 import os
+import threading
 from datetime import datetime, timedelta
+import time
 
 import bitmex
 
@@ -54,21 +56,33 @@ class BitMex:
             print(str(self.now_time()) + ' Cancel Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
                   str(order['orderQty']) + ' @ ' + str(order['price']))
 
-    def fetch_ohlc(self, starttime, endtime):
+    def fetch_ohlcv(self, starttime, endtime):
         candles = self.client.Trade.Trade_getBucketed(symbol='XBTUSD', binSize=self.tr,
                                                       startTime=starttime, endTime=endtime).result()[0]
         return candles
 
-    def __on_update(self, data):
-        if self.listener is not None:
-            endtime   = datetime.now() - timedelta(hours=9)
-            starttime = endtime - self.periods * delta(tr=self.tr)
-            source    = self.fetch_ohlc(starttime=starttime, endtime=endtime)
-            self.listener(source)
+    def _crawler_run(self):
+        dt_prev = datetime.now()
+        while True:
+            dt_now = datetime.now()
+            if dt_now - dt_prev < delta(self.tr):
+                continue
+            try:
+                endtime = datetime.now()
+                starttime = endtime - self.periods * delta(tr=self.tr)
+                source = self.fetch_ohlcv(starttime=starttime, endtime=endtime)
+                if self.listener is not None:
+                    self.listener(source)
+            except Exception as e:
+                print(e)
+                time.sleep(2)
+                continue
+            dt_prev = dt_now
 
     def on_update(self, listener):
         self.listener = listener
-        self.ws.on_update(key=self.tr, func=self.__on_update)
+        crawler = threading.Thread(target=self._crawler_run)
+        crawler.start()
 
     def print_result(self):
         pass

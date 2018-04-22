@@ -28,7 +28,7 @@ class BitMexTest(BitMexStub):
 
     def __init__(self, tr='1h', periods=30):
         BitMexStub.__init__(self, tr=tr, periods=periods, notify=False)
-        self.load_ohlc()
+        self.load_ohlcv()
         self.start_balance = self.wallet_balance()
 
     def market_price(self):
@@ -45,7 +45,7 @@ class BitMexTest(BitMexStub):
         else:
             self.sell_signals.append(self.index)
 
-    def clean_ohlc(self):
+    def clean_ohlcv(self):
         source = []
         for index, row in self.ohlc_df.iterrows():
             if len(source) == 0:
@@ -78,7 +78,7 @@ class BitMexTest(BitMexStub):
         })
         self.ohlc_df.index = self.ohlc_df['timestamp']
 
-    def load_ohlc(self):
+    def load_ohlcv(self):
         i = 0
         if os.path.exists(OHLC_FILENAME.format(self.tr, i)):
             while True:
@@ -90,7 +90,7 @@ class BitMexTest(BitMexStub):
                     self.ohlc_df = pd.concat([self.ohlc_df, pd.read_csv(filename)], ignore_index=True)
                     i += 1
                 else:
-                    self.clean_ohlc()
+                    self.clean_ohlcv()
                     return
 
         os.makedirs(OHLC_DIRNAME.format(self.tr))
@@ -111,7 +111,7 @@ class BitMexTest(BitMexStub):
         while True:
             try:
                 print('Load ohlc: ' + str(lefttime))
-                source = BitMex.fetch_ohlc(self, starttime=lefttime, endtime=righttime)
+                source = BitMex.fetch_ohlcv(self, starttime=lefttime, endtime=righttime)
             except Exception as e:
                 print(e)
                 time.sleep(60)
@@ -137,7 +137,7 @@ class BitMexTest(BitMexStub):
                 list = []
                 i += 1
 
-        self.load_ohlc()
+        self.load_ohlcv()
 
     def __crawler_run(self):
         source = []
