@@ -1,10 +1,10 @@
 # coding: UTF-8
 
-from mex import BitMex
-from util import Side, lineNotify
+from src.mex import BitMex
+from src.util import Side, lineNotify
 
 class BitMexStub(BitMex):
-    balance      = 200
+    balance      = 1000
     leverage     = 2
     current_qty  = 0
     entry_price  = 0
@@ -84,8 +84,10 @@ class BitMexStub(BitMex):
                 lineNotify('{} # Create Order : {} / {} @ {}'.format(self.now_time(), side, size, price))
             else:
                 print('{} # Create Order : {} / {} @ {}'.format(self.now_time(), side, size, price))
-
             self.current_qty = next_qty
             self.entry_price = price
+        else:
+            self.current_qty = 0
+            self.entry_price = 0
 
         self.order_count+=1

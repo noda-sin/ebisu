@@ -60,3 +60,29 @@ def lineNotify(message, fileName=None):
             requests.post(url, data=payload, headers=headers, files=files)
         except:
             pass
+
+def crossover(a, b):
+    return a[-2] < b[-2] and a[-1] > b[-1]
+
+def crossunder(a, b):
+    return a[-2] > b[-2] and a[-1] < b[-1]
+
+def ord(seq, idx, itv):
+    p = seq[idx]
+    o = 1
+    for i in range(0, itv):
+        if p < seq[i]:
+            o = o + 1
+    return o
+
+def d(src, itv):
+    sum = 0.0
+    for i in range(0, itv):
+        sum = sum + pow((i + 1) - ord(src, i, itv),2)
+    return sum
+
+def rci(src, itv):
+    reversed_src = src[::-1]
+    ret = [(1.0 - 6.0 * d(reversed_src[i:i+itv], itv) / (itv * (itv * itv - 1.0))) * 100.0
+            for i in range(len(reversed_src) - itv)]
+    return ret[::-1]

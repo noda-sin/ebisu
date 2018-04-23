@@ -3,13 +3,14 @@
 import json
 import os
 import threading
-from datetime import datetime, timedelta
 import time
+from datetime import datetime
 
 import bitmex
 
-from mex_ws import BitMexWs
-from util import delta
+from src.mex_ws import BitMexWs
+from src.util import delta
+
 
 class BitMex:
     listener = None
@@ -50,7 +51,7 @@ class BitMex:
         print(str(self.now_time()) + ' Create Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
               str(order['orderQty']) + ' @ ' + str(order['price']) + ' / ' + order['orderID'])
 
-    def cancel_orders(self):
+    def close_order(self):
         orders = self.client.Order.Order_cancelAll().result()[0]
         for order in orders:
             print(str(self.now_time()) + ' Cancel Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +

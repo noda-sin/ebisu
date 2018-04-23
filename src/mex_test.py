@@ -1,16 +1,17 @@
 # coding: UTF-8
 
 import os
-from datetime import timedelta, datetime
 import time
+from datetime import timedelta, datetime
+
 import pandas as pd
-from mex_stub import BitMexStub
+from src.mex_stub import BitMexStub
 
-from mex import BitMex
-from util import Side, change_rate, delta
+from src.mex import BitMex
+from src.util import Side, change_rate, delta
 
-OHLC_DIRNAME  = os.path.join(os.path.dirname(__file__), "ohlc/{}")
-OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "ohlc/{}/ohlc_{}.csv")
+OHLC_DIRNAME  = os.path.join(os.path.dirname(__file__), "../ohlc/{}")
+OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}/ohlc_{}.csv")
 
 class BitMexTest(BitMexStub):
     price        = 0
@@ -98,7 +99,7 @@ class BitMexTest(BitMexStub):
         if self.tr == '1d' or self.tr == '1h':
             starttime = datetime(year=2017, month=1, day=1, hour=0, minute=0)
         elif self.tr == '5m':
-            starttime = datetime.now() - timedelta(days=31*3)
+            starttime = datetime.now() - timedelta(days=10)
         else:
             starttime = datetime.now() - timedelta(days=31)
 

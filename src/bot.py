@@ -2,9 +2,11 @@
 
 import sys
 
-from mex import BitMex
-from mex_stub import BitMexStub
-from mex_test import BitMexTest
+from src.mex_stub import BitMexStub
+from src.mex_test import BitMexTest
+
+from src.mex import BitMex
+
 
 class Bot:
     def __init__(self, demo=False, test=False, tr='1h', periods=20, params={}):
@@ -31,6 +33,6 @@ class Bot:
         self.bitmex.print_result()
 
     def close(self):
-        self.bitmex.cancel_orders()
+        self.bitmex.close_order()
         self.bitmex.close_position()
         sys.exit()
