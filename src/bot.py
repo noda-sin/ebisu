@@ -9,8 +9,10 @@ from src.mex import BitMex
 
 
 class Bot:
-    def __init__(self, demo=False, test=False, tr='1h', periods=20, params={}):
-        self.params  = params
+    def __init__(self, demo=False, test=False, tr='1h', periods=20, params=None):
+        if params is None:
+            params = {}
+        self.params = params
 
         if demo:
             self.bitmex = BitMexStub(tr=tr, periods=periods)
@@ -25,7 +27,7 @@ class Bot:
         else:
             return defval
 
-    def strategy(self, source):
+    def strategy(self, open, close, high, low):
         pass
 
     def run(self):

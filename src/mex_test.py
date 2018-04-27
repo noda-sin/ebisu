@@ -5,10 +5,11 @@ import time
 from datetime import timedelta, datetime
 
 import pandas as pd
-from src.mex_stub import BitMexStub
 
+from src import util
 from src.mex import BitMex
-from src.util import Side, change_rate, delta
+from src.mex_stub import BitMexStub
+from src.util import change_rate, delta
 
 OHLC_DIRNAME  = os.path.join(os.path.dirname(__file__), "../ohlc/{}")
 OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}/ohlc_{}.csv")
@@ -38,10 +39,10 @@ class BitMexTest(BitMexStub):
     def now_time(self):
         return self.time
 
-    def entry(self, side, size):
-        BitMexStub.entry(self, side, size)
+    def entry(self, long, qty, limit=0, stop=0, when=True):
+        BitMexStub.entry(self, long, qty, limit, stop, when)
 
-        if side == Side.Long:
+        if long:
             self.buy_signals.append(self.index)
         else:
             self.sell_signals.append(self.index)
@@ -99,7 +100,7 @@ class BitMexTest(BitMexStub):
         if self.tr == '1d' or self.tr == '1h':
             starttime = datetime(year=2017, month=1, day=1, hour=0, minute=0)
         elif self.tr == '5m':
-            starttime = datetime.now() - timedelta(days=10)
+            starttime = datetime.now() - timedelta(days=31)
         else:
             starttime = datetime.now() - timedelta(days=31)
 
@@ -148,7 +149,8 @@ class BitMexTest(BitMexStub):
             self.time         = row['timestamp']
             self.index        = index
             if len(source) > self.periods:
-                self.listener(source)
+                open, close, high, low = util.ohlcv(source)
+                self.listener(open, close, high, low)
                 source.pop(0)
             self.balance_history.append(self.balance-self.start_balance)
 
@@ -158,6 +160,8 @@ class BitMexTest(BitMexStub):
 
     def print_result(self):
         print('#--------------------------------------------------------')
+        print('# 利益 : {}'.format(self.balance-self.start_balance))
+        print('# 利益率 : {}'.format((self.balance-self.start_balance)/self.start_balance*100))
         print('# トレード回数 : {}'.format(self.order_count))
         print('# 勝率 : {} %'.format((self.win_count)/(self.win_count+self.lose_count)*100))
         print('# プロフィッットファクター : {}'.format((self.win_profit)/(self.lose_loss)))

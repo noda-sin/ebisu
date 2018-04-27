@@ -1,7 +1,7 @@
 # coding: UTF-8
 
 from src.mex import BitMex
-from src.util import Side, lineNotify
+from src.util import lineNotify
 
 class BitMexStub(BitMex):
     balance      = 1000
@@ -18,6 +18,8 @@ class BitMexStub(BitMex):
     lose_loss    = 0
 
     max_drowdown = 0
+
+    orders = []
 
     def __init__(self, tr='1h', periods=30, notify=True):
         BitMex.__init__(self, tr=tr, periods=periods)
@@ -38,19 +40,35 @@ class BitMexStub(BitMex):
     def close_position(self):
         pos = self.current_qty
         if pos > 0:
-            self.entry(side=Side.Short, size=pos)
+            self.entry(True, abs(pos))
         elif pos < 0:
-            self.entry(side=Side.Long, size=-1*pos)
+            self.entry(False, abs(pos))
 
-    def entry(self, side, size):
-        price = self.market_price()
+    def close_order(self):
+        self.orders = []
 
-        if side == Side.Long:
-            order_qty = size
+    def entry(self, long, qty, limit=0, stop=0, when=True):
+        if not when:
+            return
+
+        self.close_order()
+        pos = self.position_qty()
+
+        if long and pos > 0:
+            return
+
+        if not long and pos < 0:
+            return
+
+        if limit > 0 or stop > 0:
+            self.orders.append({"long": long, "qty": qty, "limit": limit, "stop": stop})
         else:
-            order_qty = -size
+            self.__commit(long, qty, self.market_price())
+            return
 
-        next_qty = self.current_qty + order_qty
+    def __commit(self, long, qty, price):
+        order_qty = qty if long else -qty
+        next_qty  = self.current_qty + order_qty
 
         if (self.current_qty > 0 and order_qty <= 0) or \
                 (self.current_qty < 0 and order_qty > 0):
@@ -72,6 +90,7 @@ class BitMexStub(BitMex):
                     self.max_drowdown = close_rate
 
             self.balance += profit
+
             if self.notify:
                 lineNotify('{} # Close Position @ {}'.format(self.now_time(), profit))
                 lineNotify('{} # Balance @ {}'.format(self.now_time(), self.balance))
@@ -91,3 +110,34 @@ class BitMexStub(BitMex):
             self.entry_price = 0
 
         self.order_count+=1
+
+    def on_update(self, listener):
+        def __overwride_listener(open, close, high, low):
+            new_orders = []
+
+            for _, order in enumerate(self.orders):
+                long  = order["long"]
+                qty   = order["qty"]
+                limit = order["limit"]
+                stop  = order["stop"]
+
+                if limit > 0 and stop > 0:
+                    if (long and high > stop and close < limit) or (not long and low < stop and close > limit):
+                        self.__commit(long, qty, limit)
+                        continue
+                    elif (long and high > stop) or (not long and low < stop):
+                        new_orders.append({"long":long, "qty": qty, "limit": limit, "stop": 0})
+                        continue
+                elif limit > 0:
+                    if (long and low < limit) or (not long and high > limit):
+                        self.__commit(long, qty, limit)
+                        continue
+                elif stop > 0:
+                    if (long and high > stop) or (not long and low < stop):
+                        self.__commit(long, qty, stop)
+                        continue
+                new_orders.append(order)
+            self.orders = new_orders
+            listener(open, close, high, low)
+
+        BitMex.on_update(self, __overwride_listener)

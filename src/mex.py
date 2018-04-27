@@ -8,6 +8,7 @@ from datetime import datetime
 
 import bitmex
 
+from src import util
 from src.mex_ws import BitMexWs
 from src.util import delta
 
@@ -45,9 +46,32 @@ class BitMex:
     def trade_fee(self):
         return 0.075/100
 
-    def entry(self, side, size):
-        order = self.client.Order.Order_new(symbol='XBTUSD', ordType='Market',
-                                    side=side.capitalize(), orderQty=size).result()[0]
+    def entry(self, long, qty, limit=0, stop=0, when=True):
+        if not when:
+            return
+
+        self.close_order()
+        pos = self.position_qty()
+
+        if long and pos > 0:
+            return
+
+        if not long and pos < 0:
+            return
+
+        side = 'Long' if long else 'Short'
+        qty  = qty + abs(pos)
+        if limit > 0 and stop > 0:
+            ordType = 'StopLimit'
+        elif limit > 0:
+            ordType = 'Limit'
+        elif stop > 0:
+            ordType = 'Stop'
+        else:
+            ordType = 'Market'
+
+        order = self.client.Order.Order_new(symbol='XBTUSD', ordType=ordType,
+                                    side=side, orderQty=qty, price=limit, stopPx=stop).result()[0]
         print(str(self.now_time()) + ' Create Order: ' + order['ordType'] + ' ' + order['side'] + ': ' +
               str(order['orderQty']) + ' @ ' + str(order['price']) + ' / ' + order['orderID'])
 
@@ -62,7 +86,7 @@ class BitMex:
                                                       startTime=starttime, endTime=endtime).result()[0]
         return candles
 
-    def _crawler_run(self):
+    def __crawler_run(self):
         dt_prev = datetime.now()
         while True:
             dt_now = datetime.now()
@@ -73,7 +97,8 @@ class BitMex:
                 starttime = endtime - self.periods * delta(tr=self.tr)
                 source = self.fetch_ohlcv(starttime=starttime, endtime=endtime)
                 if self.listener is not None:
-                    self.listener(source)
+                    open, close, high, low = util.ohlcv(source)
+                    self.listener(open, close, high, low)
             except Exception as e:
                 print(e)
                 time.sleep(2)
@@ -82,7 +107,7 @@ class BitMex:
 
     def on_update(self, listener):
         self.listener = listener
-        crawler = threading.Thread(target=self._crawler_run)
+        crawler = threading.Thread(target=self.__crawler_run)
         crawler.start()
 
     def print_result(self):
