@@ -4,22 +4,21 @@ import sys
 
 from src.mex_stub import BitMexStub
 from src.mex_test import BitMexTest
-
 from src.mex import BitMex
 
 
 class Bot:
-    def __init__(self, demo=False, test=False, tr='1h', periods=20, params=None):
+    def __init__(self, tr, periods, demo=False, test=False, params=None):
         if params is None:
             params = {}
         self.params = params
 
         if demo:
-            self.bitmex = BitMexStub(tr=tr, periods=periods)
+            self.exchange = BitMexStub(tr, periods)
         elif test:
-            self.bitmex = BitMexTest(tr=tr, periods=periods)
+            self.exchange = BitMexTest(tr, periods)
         else:
-            self.bitmex = BitMex(tr=tr, periods=periods)
+            self.exchange = BitMex(tr, periods)
 
     def input(self, title, defval):
         if title in self.params:
@@ -31,10 +30,10 @@ class Bot:
         pass
 
     def run(self):
-        self.bitmex.on_update(listener=self.strategy)
-        self.bitmex.print_result()
+        self.exchange.on_update(self.strategy)
+        self.exchange.show_result()
 
     def close(self):
-        self.bitmex.close_order()
-        self.bitmex.close_position()
+        self.exchange.cancel_all()
+        self.exchange.close_all()
         sys.exit()
