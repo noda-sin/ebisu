@@ -6,10 +6,9 @@ from datetime import timedelta, datetime
 
 import pandas as pd
 
-from src import util
-from src.mex import BitMex
-from src.mex_stub import BitMexStub
-from src.util import change_rate, delta
+from daikokuten import change_rate, delta, gen_ohlcv
+from daikokuten.mex import BitMex
+from daikokuten.mex_stub import BitMexStub
 
 OHLC_DIRNAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}")
 OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}/ohlc_{}.csv")
@@ -40,8 +39,8 @@ class BitMexTest(BitMexStub):
     def now_time(self):
         return self.time
 
-    def entry(self, long, qty, limit=0, stop=0, when=True):
-        BitMexStub.entry(self, long, qty, limit, stop, when)
+    def entry(self, id, long, qty, limit=0, stop=0, when=True):
+        BitMexStub.entry(self, id, long, qty, limit, stop, when)
 
         if long:
             self.buy_signals.append(self.index)
@@ -56,10 +55,12 @@ class BitMexTest(BitMexStub):
             self.time = row['timestamp']
             self.index = index
             if len(source) > self.periods:
-                open, close, high, low = util.ohlcv(source)
+                open, close, high, low = gen_ohlcv(source)
                 self.listener(open, close, high, low)
                 source.pop(0)
             self.balance_history.append(self.get_balance() - self.start_balance)
+        self.close_all()
+        self.balance_history.append(self.get_balance() - self.start_balance)
 
     def on_update(self, listener):
         BitMexStub.on_update(self, listener)
@@ -130,7 +131,6 @@ class BitMexTest(BitMexStub):
         list = []
         while True:
             try:
-                print('Load ohlc: ' + str(left_time))
                 source = BitMex.fetch_ohlcv(self, start_time=left_time, end_time=right_time)
             except Exception as e:
                 print(e)

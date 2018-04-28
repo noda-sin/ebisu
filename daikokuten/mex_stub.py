@@ -1,7 +1,6 @@
 # coding: UTF-8
-
-from src.mex import BitMex
-from src.util import lineNotify
+from daikokuten import logger, lineNotify
+from daikokuten.mex import BitMex
 
 
 class BitMexStub(BitMex):
@@ -40,18 +39,20 @@ class BitMexStub(BitMex):
     def close_all(self):
         pos_size = self.position_size
         if pos_size > 0:
-            self.entry(True, abs(pos_size))
+            self.entry("CLOSE", False, abs(pos_size))
         elif pos_size < 0:
-            self.entry(False, abs(pos_size))
+            self.entry("CLOSE", True, abs(pos_size))
+
+    def cancel(self, id):
+        self.open_orders = [o for o in self.open_orders if o["id"] != id]
 
     def cancel_all(self):
         self.open_orders = []
 
-    def entry(self, long, qty, limit=0, stop=0, when=True):
+    def entry(self, id, long, qty, limit=0, stop=0, when=True):
         if not when:
             return
 
-        self.cancel_all()
         pos_size = self.get_position_size()
 
         if long and pos_size > 0:
@@ -60,13 +61,26 @@ class BitMexStub(BitMex):
         if not long and pos_size < 0:
             return
 
-        if limit > 0 or stop > 0:
-            self.open_orders.append({"long": long, "qty": qty, "limit": limit, "stop": stop})
+        self.cancel(id)
+        side = "Long" if long else "Short"
+        ord_qty = qty + abs(pos_size)
+
+        if limit > 0 and stop > 0:
+            ord_type = "StopLimit"
+        elif limit > 0:
+            ord_type = "Limit"
+        elif stop > 0:
+            ord_type = "Stop"
         else:
-            self.__commit(long, qty, self.get_market_price())
+            ord_type = "Market"
+
+        if limit > 0 or stop > 0:
+            self.open_orders.append({"id": id, "long": long, "qty": ord_qty, "limit": limit, "stop": stop})
+        else:
+            self.__commit(id, long, ord_qty, self.get_market_price())
             return
 
-    def __commit(self, long, qty, price):
+    def __commit(self, id, long, qty, price):
         self.order_count += 1
 
         order_qty = qty if long else -qty
@@ -90,10 +104,25 @@ class BitMexStub(BitMex):
                 self.lose_count += 1
                 if close_rate > self.max_draw_down:
                     self.max_draw_down = close_rate
-
             self.balance += profit
 
+            logger.info(f"========= Close Position =============")
+            logger.info(f"TRADE COUNT  : {self.order_count}")
+            logger.info(f"POSITION SIZE: {self.position_size}")
+            logger.info(f"PROFIT       : {profit}")
+            logger.info(f"BALANCE      : {self.get_balance()}")
+            logger.info(f"WIN RATE     : {0 if self.order_count == 0 else self.win_count/self.order_count*100} %")
+            logger.info(f"Profit Factor: {self.win_profit if self.lose_loss == 0 else self.win_profit/self.lose_loss}")
+            logger.info(f"MAX DROW DOWN: {self.max_draw_down * 100}")
+            logger.info(f"======================================")
+
         if next_qty != 0:
+            logger.info(f"********* Create Position ************")
+            logger.info(f"TRADE COUNT  : {self.order_count}")
+            logger.info(f"ID           : {id}")
+            logger.info(f"POSITION SIZE: {qty}")
+            logger.info(f"**************************************")
+
             self.position_size = next_qty
             self.position_avg_price = price
         else:
@@ -105,25 +134,26 @@ class BitMexStub(BitMex):
             new_open_orders = []
 
             for _, order in enumerate(self.open_orders):
+                id = order["id"]
                 long = order["long"]
                 qty = order["qty"]
                 limit = order["limit"]
                 stop = order["stop"]
 
                 if limit > 0 and stop > 0:
-                    if (long and high > stop and close < limit) or (not long and low < stop and close > limit):
-                        self.__commit(long, qty, limit)
+                    if (long and high[-1] > stop and close[-1] < limit) or (not long and low[-1] < stop and close[-1] > limit):
+                        self.__commit(id, long, qty, limit)
                         continue
-                    elif (long and high > stop) or (not long and low < stop):
-                        new_open_orders.append({"long": long, "qty": qty, "limit": limit, "stop": 0})
+                    elif (long and high[-1] > stop) or (not long and low[-1] < stop):
+                        new_open_orders.append({"id": id, "long": long, "qty": qty, "limit": limit, "stop": 0})
                         continue
                 elif limit > 0:
-                    if (long and low < limit) or (not long and high > limit):
-                        self.__commit(long, qty, limit)
+                    if (long and low[-1] < limit) or (not long and high[-1] > limit):
+                        self.__commit(id, long, qty, limit)
                         continue
                 elif stop > 0:
-                    if (long and high > stop) or (not long and low < stop):
-                        self.__commit(long, qty, stop)
+                    if (long and high[-1] > stop) or (not long and low[-1] < stop):
+                        self.__commit(id, long, qty, stop)
                         continue
 
                 new_open_orders.append(order)

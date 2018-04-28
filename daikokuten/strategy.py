@@ -1,7 +1,6 @@
 # coding: UTF-8
-
-import src.util as util
-from src.bot import Bot
+from daikokuten import highest, lowest
+from daikokuten.bot import Bot
 
 
 class ChannelBreakout(Bot):
@@ -11,7 +10,7 @@ class ChannelBreakout(Bot):
     def strategy(self, open, close, high, low):
         length = self.input('length', 18)
         lot = self.exchange.get_balance() / 20
-        up = util.highest(high[:-1], length)[-1]
-        dn = util.lowest(low[:-1], length)[-1]
-        self.exchange.entry(True, lot, stop=up)
-        self.exchange.entry(False, lot, stop=dn)
+        up = highest(high[:-1], length)[-1]
+        dn = lowest(low[:-1], length)[-1]
+        self.exchange.entry("Long",  True,  lot, stop=up)
+        self.exchange.entry("Short", False, lot, stop=dn)

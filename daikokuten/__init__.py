@@ -1,12 +1,16 @@
-# coding: UTF-8
-
-import os
+import logging
 from datetime import timedelta
 
-import numpy as np
 import pandas as pd
-import requests
+import numpy as np
 import talib
+import requests
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
 class Side:
@@ -16,7 +20,7 @@ class Side:
     Unknown = "Unknown"
 
 
-def ohlcv(src):
+def gen_ohlcv(src):
     open = np.array([v['open'] for _, v in enumerate(src)])
     close = np.array([v['close'] for _, v in enumerate(src)])
     high = np.array([v['high'] for _, v in enumerate(src)])

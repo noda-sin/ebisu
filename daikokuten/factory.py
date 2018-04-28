@@ -1,6 +1,6 @@
 # coding: UTF-8
 
-from src.strategy import ChannelBreakout
+from daikokuten.strategy import ChannelBreakout
 
 
 class BotFactory():
