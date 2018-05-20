@@ -4,8 +4,8 @@ from daikokuten.bot import Bot
 
 
 class ChannelBreakout(Bot):
-    def __init__(self, demo=False, test=False, params=None):
-        Bot.__init__(self, '1h', 20, demo=demo, test=test, params=params)
+    def __init__(self, demo=False, stub=False, test=False, params=None):
+        Bot.__init__(self, '1h', 20, demo=demo, stub=stub, test=test, params=params)
 
     def strategy(self, open, close, high, low):
         length = self.input('length', 18)

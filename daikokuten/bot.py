@@ -8,17 +8,17 @@ from daikokuten.mex import BitMex
 
 
 class Bot:
-    def __init__(self, tr, periods, demo=False, test=False, params=None):
+    def __init__(self, tr, periods, demo=False, stub=False, test=False, params=None):
         if params is None:
             params = {}
         self.params = params
 
-        if demo:
+        if stub:
             self.exchange = BitMexStub(tr, periods)
         elif test:
             self.exchange = BitMexTest(tr, periods)
         else:
-            self.exchange = BitMex(tr, periods)
+            self.exchange = BitMex(tr, periods, demo=demo)
 
     def input(self, title, defval):
         if title in self.params:

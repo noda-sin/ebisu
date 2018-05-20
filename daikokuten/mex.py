@@ -4,6 +4,9 @@ import json
 import os
 import threading
 import time
+
+from bravado.exception import HTTPNotFound
+from pytz import timezone
 from datetime import datetime
 
 import bitmex
@@ -15,20 +18,20 @@ from daikokuten.mex_ws import BitMexWs
 class BitMex:
     listener = None
 
-    def __init__(self, tr, periods, test=False, run=True):
-        apiKey = os.environ.get("BITMEX_TEST_APIKEY") if test else os.environ.get("BITMEX_APIKEY")
-        secret = os.environ.get("BITMEX_TEST_SECRET") if test else os.environ.get("BITMEX_SECRET")
-        self.client = bitmex.bitmex(test=test, api_key=apiKey, api_secret=secret)
+    def __init__(self, tr, periods, demo=False, run=True):
+        apiKey = os.environ.get("BITMEX_TEST_APIKEY") if demo else os.environ.get("BITMEX_APIKEY")
+        secret = os.environ.get("BITMEX_TEST_SECRET") if demo else os.environ.get("BITMEX_SECRET")
+        self.client = bitmex.bitmex(test=demo, api_key=apiKey, api_secret=secret)
         self.ws = BitMexWs()
         self.tr = tr
         self.periods = periods
         self.run = run
 
     def get_balance(self):
-        pass
+        return self.client.User.User_getWallet(currency="XBt").result()[0]["amount"]
 
     def get_leverage(self):
-        pass
+        return self.client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["leverage"]
 
     def get_position_size(self):
         return self.client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["currentQty"]
@@ -42,12 +45,6 @@ class BitMex:
 
     def get_commission(self):
         return 0.075 / 100
-
-    def cancel(self, id):
-        order = self.client.Order.Order_delete(clOrdID=id).result()[0]
-        logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
-                    f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
-                    f"{order['price']}, {order['stopPx']})")
 
     def cancel_all(self):
         orders = self.client.Order.Order_cancelAll().result()[0]
@@ -74,21 +71,27 @@ class BitMex:
         if not long and pos_size < 0:
             return
 
-        self.cancel(id)
-        side = "Long" if long else "Short"
+        self.cancel(long)
+        side = "Buy" if long else "Sell"
         ord_qty = qty + abs(pos_size)
 
         if limit > 0 and stop > 0:
             ord_type = "StopLimit"
+            self.client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
+                                        side=side, orderQty=ord_qty, price=limit, stopPx=stop).result()
         elif limit > 0:
             ord_type = "Limit"
+            self.client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
+                                        side=side, orderQty=ord_qty, price=limit).result()
         elif stop > 0:
             ord_type = "Stop"
+            self.client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
+                                        side=side, orderQty=ord_qty, stopPx=stop).result()
         else:
             ord_type = "Market"
+            self.client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
+                                        side=side, orderQty=ord_qty).result()
 
-        self.client.Order.Order_new(symbol="XBTUSD", clOrdID=id, ordType=ord_type,
-                                    side=side, orderQty=ord_qty, price=limit, stopPx=stop).result()
         logger.info(f"========= Create Order ==============")
         logger.info(f"ID    : {id}")
         logger.info(f"Type  : {ord_type}")
@@ -97,6 +100,26 @@ class BitMex:
         logger.info(f"Price : {limit} %")
         logger.info(f"StopPx: {stop}")
         logger.info(f"======================================")
+
+    def cancel(self, long):
+        side = "Buy" if long else "Sell"
+        orders = [order for order in
+                  self.client.Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0]
+                  if order["side"] == side]
+        if len(orders) == 0:
+            return
+
+        for order in orders:
+            try:
+                self.client.Order.Order_cancel(orderID=order['orderID']).result()[0][0]
+            except HTTPNotFound:
+                return
+            logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
+                        f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
+                        f"{order['price']}, {order['stopPx']})")
+
+    def get_order_size(self):
+        return len(self.client.Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0])
 
     def fetch_ohlcv(self, start_time, end_time):
         return self.client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=self.tr,
@@ -107,9 +130,10 @@ class BitMex:
         while True:
             dt_now = datetime.now()
             if dt_prev is not None and dt_now - dt_prev < delta(self.tr):
+                time.sleep(10)
                 continue
             try:
-                end_time = datetime.now()
+                end_time = datetime.now(timezone('UTC'))
                 start_time = end_time - self.periods * delta(tr=self.tr)
                 source = self.fetch_ohlcv(start_time=start_time, end_time=end_time)
                 if self.listener is not None:
@@ -124,8 +148,8 @@ class BitMex:
     def on_update(self, listener):
         self.listener = listener
         if self.run:
-            crawler = threading.Thread(target=self.__crawler_run)
-            crawler.start()
+            self.crawler = threading.Thread(target=self.__crawler_run)
+            self.crawler.start()
 
     def show_result(self):
         pass
