@@ -3,7 +3,7 @@ from daikokuten import highest, lowest
 from daikokuten.bot import Bot
 
 
-class ChannelBreakout(Bot):
+class Doten(Bot):
     def __init__(self, demo=False, stub=False, test=False, params=None):
         Bot.__init__(self, '1h', 20, demo=demo, stub=stub, test=test, params=params)
 
