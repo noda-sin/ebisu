@@ -2,7 +2,6 @@
 .idea/
 *.pyc
 output.log
-bin/
 include/
 lib/
 backtest.csv
