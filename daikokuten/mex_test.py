@@ -60,7 +60,6 @@ class BitMexTest(BitMexStub):
                 source.pop(0)
             self.balance_history.append(self.get_balance() - self.start_balance)
         self.close_all()
-        self.balance_history.append(self.get_balance() - self.start_balance)
 
     def on_update(self, listener):
         BitMexStub.on_update(self, listener)
@@ -158,3 +157,21 @@ class BitMexTest(BitMexStub):
                 i += 1
 
         self.load_ohlcv()
+
+    def show_result(self):
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.subplot(211)
+        plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame["high"])
+        plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame["low"])
+        plt.ylabel("Price(USD)")
+        ymin = min(self.ohlcv_data_frame["low"]) - 200
+        ymax = max(self.ohlcv_data_frame["high"]) + 200
+        plt.vlines(self.buy_signals, ymin, ymax, "blue", linestyles='dashed', linewidth=1)
+        plt.vlines(self.sell_signals, ymin, ymax, "red", linestyles='dashed', linewidth=1)
+        plt.subplot(212)
+        plt.plot(self.ohlcv_data_frame.index, self.balance_history)
+        plt.hlines(y=0, xmin=self.ohlcv_data_frame.index[0],
+                   xmax=self.ohlcv_data_frame.index[-1], colors='k', linestyles='dashed')
+        plt.ylabel("PL(USD)")
+        plt.show()
