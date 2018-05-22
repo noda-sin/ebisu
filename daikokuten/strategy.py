@@ -9,7 +9,7 @@ class Doten(Bot):
 
     def strategy(self, open, close, high, low):
         length = self.input('length', 18)
-        lot = self.exchange.get_balance() / 20
+        lot = self.exchange.get_balance() * self.exchange.get_leverage()
         up = highest(high[:-1], length)[-1]
         dn = lowest(low[:-1], length)[-1]
         self.exchange.entry("Long",  True,  lot, stop=up)
