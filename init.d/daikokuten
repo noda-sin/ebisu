@@ -1,59 +1,104 @@
 #!/bin/sh
 
 ### BEGIN INIT INFO
-# Provides:          main.py
+# Provides:          daikokuten
+# chkconfig:         2345 99 99
 # Required-Start:    $remote_fs $syslog
 # Required-Stop:     $remote_fs $syslog
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
+# Short-Description: daikokuten
+# Description:       daikokuten
 ### END INIT INFO
 
-# Change the next 3 lines to suit where you install your script and what you want to call it
-DIR=/usr/local/bin/daikokuten
-DAEMON=$DIR/main.py
 DAEMON_NAME=daikokuten
+DAEMON_DIR=/usr/local/bin/daikokuten
 
-# Add any command line options for your daemon here
-DAEMON_OPTS="--demo --strategy doten"
+START_SCRIPT="python main.py --demo --strategy doten"
 
-# This next line determines what user the script runs as.
-# Root generally not recommended but necessary if you are using the Raspberry Pi GPIO from Python.
-DAEMON_USER=root
-
-# The process ID of the script when it runs is stored here:
 PIDFILE=/var/run/$DAEMON_NAME.pid
+LOCK_FILE=/var/lock/subsys/$DAEMON_NAME
 
-. /lib/lsb/init-functions
+# ***********************************************
+# ***********************************************
 
-do_start () {
-    log_daemon_msg "Starting system $DAEMON_NAME daemon"
-    start-stop-daemon --start --background --pidfile $PIDFILE --make-pidfile --user $DAEMON_USER --chuid $DAEMON_USER --startas $DAEMON -- $DAEMON_OPTS
-    log_end_msg $?
-}
-do_stop () {
-    log_daemon_msg "Stopping system $DAEMON_NAME daemon"
-    start-stop-daemon --stop --pidfile $PIDFILE --retry 10
-    log_end_msg $?
+# colors
+red='\e[0;31m'
+green='\e[0;32m'
+yellow='\e[0;33m'
+reset='\e[0m'
+
+start() {
+    cd $DAEMON_DIR
+    PID=`$START_SCRIPT > /dev/null 2>&1 & echo $!`
 }
 
 case "$1" in
+start)
+    if [ -f $PID_FILE ]; then
+        PID=`cat $PID_FILE`
+        echo $PID
+        if [ -z "`ps axf | grep -w ${PID} | grep -v grep`" ]; then
+            start
+        else
+            echo "Already running [$PID]"
+            exit 0
+        fi
+    else
+        start
+    fi
 
-    start|stop)
-        do_${1}
-        ;;
+    if [ -z $PID ]; then
+        echo "Failed starting"
+        exit 3
+    else
+        echo $PID > $PID_FILE
+        touch $LOCK_FILE
+        echo "Started [$PID]"
+        exit 0
+    fi
+;;
 
-    restart|reload|force-reload)
-        do_stop
-        do_start
-        ;;
+status)
+    if [ -f $PID_FILE ]; then
+        PID=`cat $PID_FILE`
+        if [ -z "`ps axf | grep -w ${PID} | grep -v grep`" ]; then
+            echo "Not running (process dead but pidfile exists)"
+            exit 1
+        else
+            echo "Running [$PID]"
+            exit 0
+        fi
+    else
+        echo "Not running"
+        exit 3
+    fi
+;;
 
-    status)
-        status_of_proc "$DAEMON_NAME" "$DAEMON" && exit 0 || exit $?
-        ;;
-    *)
-        echo "Usage: /etc/init.d/$DAEMON_NAME {start|stop|restart|status}"
-        exit 1
-        ;;
+stop)
+    if [ -f $PID_FILE ]; then
+        PID=`cat $PID_FILE`
+        if [ -z "`ps axf | grep -w ${PID} | grep -v grep`" ]; then
+            echo "Not running (process dead but pidfile exists)"
+            exit 1
+        else
+            PID=`cat $PID_FILE`
+            kill -HUP $PID
+            echo "Stopped [$PID]"
+            rm -f $PID_FILE
+            rm -f $LOCK_FILE
+            exit 0
+        fi
+    else
+        echo "Not running (pid not found)"
+        exit 3
+    fi
+;;
 
+restart)
+    $0 stop
+    $0 start
+;;
+
+*)
+    echo "Usage: $0 {status|start|stop|restart}"
+    exit 1
 esac
-exit 0
