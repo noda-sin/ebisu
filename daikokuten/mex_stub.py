@@ -104,8 +104,8 @@ class BitMexStub(BitMex):
             logger.info(f"PROFIT        : {profit}")
             logger.info(f"BALANCE       : {self.get_balance()}")
             logger.info(f"WIN RATE      : {0 if self.order_count == 0 else self.win_count/self.order_count*100} %")
-            logger.info(f"Profit Factor : {self.win_profit if self.lose_loss == 0 else self.win_profit/self.lose_loss}")
-            logger.info(f"MAX DROW DOWN : {self.max_draw_down * 100}")
+            logger.info(f"PROFIT FACTOR : {self.win_profit if self.lose_loss == 0 else self.win_profit/self.lose_loss}")
+            logger.info(f"MAX DRAW DOWN : {self.max_draw_down * 100}")
             logger.info(f"======================================")
 
         if next_qty != 0:
