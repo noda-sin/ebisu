@@ -6,6 +6,8 @@ import threading
 import websocket
 from datetime import datetime
 
+from src import logger
+
 
 class BitMexWs:
     
@@ -27,7 +29,7 @@ class BitMexWs:
             self.ws.run_forever()
 
     def __on_error(self, ws, message):
-        print(message)
+        logger.error(message)
 
     def __on_message(self, ws, message):
         try:
@@ -43,7 +45,7 @@ class BitMexWs:
                 if table in self.handlers:
                     self.handlers[table](ohlc)
         except Exception as e:
-            print(e)
+            logger.error(e)
 
     def __on_close(self, ws):
         if 'close' in self.handlers:

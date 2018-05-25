@@ -168,7 +168,7 @@ class BitMex:
                     open, close, high, low = gen_ohlcv(source)
                     self.listener(open, close, high, low)
             except Exception as e:
-                print(e)
+                logger.error(e)
                 time.sleep(2)
                 continue
             dt_prev = dt_now

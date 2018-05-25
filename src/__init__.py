@@ -92,7 +92,7 @@ def change_rate(a, b):
 
 
 def lineNotify(message, fileName=None):
-    print(message)
+    logger.info(message)
     url = 'https://notify-api.line.me/api/notify'
     apikey = os.environ.get('LINE_APIKEY')
     payload = {'message': message}

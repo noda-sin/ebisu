@@ -6,7 +6,7 @@ from datetime import timedelta, datetime
 
 import pandas as pd
 
-from src import change_rate, delta, gen_ohlcv
+from src import change_rate, delta, gen_ohlcv, logger
 from src.mex import BitMex
 from src.mex_stub import BitMexStub
 
@@ -134,7 +134,7 @@ class BitMexTest(BitMexStub):
             try:
                 source = BitMex.fetch_ohlcv(self, start_time=left_time, end_time=right_time)
             except Exception as e:
-                print(e)
+                logger.error(e)
                 time.sleep(60)
                 continue
 
