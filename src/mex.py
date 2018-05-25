@@ -11,8 +11,8 @@ from datetime import datetime
 
 import bitmex
 
-from daikokuten import logger, delta, gen_ohlcv
-from daikokuten.mex_ws import BitMexWs
+from src import logger, delta, gen_ohlcv
+from src.mex_ws import BitMexWs
 
 
 class BitMex:

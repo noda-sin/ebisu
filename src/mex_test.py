@@ -6,9 +6,9 @@ from datetime import timedelta, datetime
 
 import pandas as pd
 
-from daikokuten import change_rate, delta, gen_ohlcv
-from daikokuten.mex import BitMex
-from daikokuten.mex_stub import BitMexStub
+from src import change_rate, delta, gen_ohlcv
+from src.mex import BitMex
+from src.mex_stub import BitMexStub
 
 OHLC_DIRNAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}")
 OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}/ohlc_{}.csv")

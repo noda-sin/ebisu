@@ -26,4 +26,4 @@ RUN pip3 install -r /tmp/requirements.txt
 ADD ./ /opt/webapp/
 WORKDIR /opt/webapp
 
-CMD python3 app.py --demo
+CMD python3 main.py --demo

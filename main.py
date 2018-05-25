@@ -3,7 +3,7 @@
 
 import argparse
 
-from daikokuten.factory import BotFactory
+from src.factory import BotFactory
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="This is trading script on bitmex")

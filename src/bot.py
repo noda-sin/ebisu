@@ -2,9 +2,9 @@
 
 import sys
 
-from daikokuten.mex_stub import BitMexStub
-from daikokuten.mex_test import BitMexTest
-from daikokuten.mex import BitMex
+from src.mex_stub import BitMexStub
+from src.mex_test import BitMexTest
+from src.mex import BitMex
 
 
 class Bot:

@@ -1,6 +1,6 @@
 # coding: UTF-8
-from daikokuten import logger
-from daikokuten.mex import BitMex
+from src import logger
+from src.mex import BitMex
 
 
 class BitMexStub(BitMex):

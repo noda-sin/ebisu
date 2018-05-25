@@ -1,6 +1,6 @@
 # coding: UTF-8
 
-import daikokuten.strategy as strategy
+import src.strategy as strategy
 
 
 class BotFactory():

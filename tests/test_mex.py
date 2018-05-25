@@ -1,6 +1,6 @@
 import unittest
 
-from daikokuten.mex import BitMex
+from src.mex import BitMex
 
 
 class TestMex(unittest.TestCase):

@@ -1,6 +1,6 @@
 # coding: UTF-8
-from daikokuten import highest, lowest, sma, crossover, crossunder
-from daikokuten.bot import Bot
+from src import highest, lowest, sma, crossover, crossunder
+from src.bot import Bot
 
 class Doten(Bot):
     def __init__(self, demo=False, stub=False, test=False, params=None):
