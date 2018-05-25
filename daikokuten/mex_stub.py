@@ -101,7 +101,6 @@ class BitMexStub(BitMex):
             logger.info(f"POSITION SIZE : {self.position_size}")
             logger.info(f"ENTRY PRICE   : {self.position_avg_price}")
             logger.info(f"EXIT PRICE    : {price}")
-            logger.info(f"EXIT RATE     : {close_rate}")
             logger.info(f"PROFIT        : {profit}")
             logger.info(f"BALANCE       : {self.get_balance()}")
             logger.info(f"WIN RATE      : {0 if self.order_count == 0 else self.win_count/self.order_count*100} %")

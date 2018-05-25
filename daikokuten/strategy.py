@@ -4,11 +4,11 @@ from daikokuten.bot import Bot
 
 class Doten(Bot):
     def __init__(self, demo=False, stub=False, test=False, params=None):
-        Bot.__init__(self, '1h', 20, demo=demo, stub=stub, test=test, params=params)
+        Bot.__init__(self, '2h', 11, demo=demo, stub=stub, test=test, params=params)
 
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()
-        length = self.input('length', 18)
+        length = self.input('length', 9)
         up = highest(high[:-1], length)[-1]
         dn = lowest(low[:-1], length)[-1]
         self.exchange.entry("Long",  True,  lot, stop=up + 20)
