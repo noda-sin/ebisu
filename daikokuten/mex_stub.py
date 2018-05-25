@@ -1,5 +1,5 @@
 # coding: UTF-8
-from daikokuten import logger, lineNotify
+from daikokuten import logger
 from daikokuten.mex import BitMex
 
 
@@ -62,17 +62,7 @@ class BitMexStub(BitMex):
             return
 
         self.cancel(id)
-        side = "Long" if long else "Short"
         ord_qty = qty + abs(pos_size)
-
-        if limit > 0 and stop > 0:
-            ord_type = "StopLimit"
-        elif limit > 0:
-            ord_type = "Limit"
-        elif stop > 0:
-            ord_type = "Stop"
-        else:
-            ord_type = "Market"
 
         if limit > 0 or stop > 0:
             self.open_orders.append({"id": id, "long": long, "qty": ord_qty, "limit": limit, "stop": stop})
