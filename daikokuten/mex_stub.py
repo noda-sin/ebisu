@@ -5,7 +5,7 @@ from daikokuten.mex import BitMex
 
 class BitMexStub(BitMex):
     balance = 1000
-    leverage = 2
+    leverage = 1
     position_size = 0
     position_avg_price = 0
 
@@ -97,20 +97,23 @@ class BitMexStub(BitMex):
             self.balance += profit
 
             logger.info(f"========= Close Position =============")
-            logger.info(f"TRADE COUNT  : {self.order_count}")
-            logger.info(f"POSITION SIZE: {self.position_size}")
-            logger.info(f"PROFIT       : {profit}")
-            logger.info(f"BALANCE      : {self.get_balance()}")
-            logger.info(f"WIN RATE     : {0 if self.order_count == 0 else self.win_count/self.order_count*100} %")
-            logger.info(f"Profit Factor: {self.win_profit if self.lose_loss == 0 else self.win_profit/self.lose_loss}")
-            logger.info(f"MAX DROW DOWN: {self.max_draw_down * 100}")
+            logger.info(f"TRADE COUNT   : {self.order_count}")
+            logger.info(f"POSITION SIZE : {self.position_size}")
+            logger.info(f"ENTRY PRICE   : {self.position_avg_price}")
+            logger.info(f"EXIT PRICE    : {price}")
+            logger.info(f"EXIT RATE     : {close_rate}")
+            logger.info(f"PROFIT        : {profit}")
+            logger.info(f"BALANCE       : {self.get_balance()}")
+            logger.info(f"WIN RATE      : {0 if self.order_count == 0 else self.win_count/self.order_count*100} %")
+            logger.info(f"Profit Factor : {self.win_profit if self.lose_loss == 0 else self.win_profit/self.lose_loss}")
+            logger.info(f"MAX DROW DOWN : {self.max_draw_down * 100}")
             logger.info(f"======================================")
 
         if next_qty != 0:
             logger.info(f"********* Create Position ************")
-            logger.info(f"TRADE COUNT  : {self.order_count}")
-            logger.info(f"ID           : {id}")
-            logger.info(f"POSITION SIZE: {qty}")
+            logger.info(f"TRADE COUNT   : {self.order_count}")
+            logger.info(f"ID            : {id}")
+            logger.info(f"POSITION SIZE : {qty}")
             logger.info(f"**************************************")
 
             self.position_size = next_qty

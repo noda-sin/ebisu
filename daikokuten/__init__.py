@@ -68,6 +68,9 @@ def di_minus(high, low, close, period=14):
     return talib.MINUS_DI(high, low, close, period)
 
 
+def rsi(close, period=14):
+    return talib.RSI(close, period)
+
 def delta(tr='1h'):
     if tr == '1d':
         return timedelta(days=1)
@@ -75,6 +78,8 @@ def delta(tr='1h'):
         return timedelta(minutes=5)
     elif tr == '1m':
         return timedelta(minutes=1)
+    elif tr == '2h':
+        return timedelta(hours=2)
     else:
         return timedelta(hours=1)
 

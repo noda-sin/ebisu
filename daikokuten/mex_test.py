@@ -115,7 +115,7 @@ class BitMexTest(BitMexStub):
 
         os.makedirs(OHLC_DIRNAME.format(self.tr))
 
-        if self.tr == '1d' or self.tr == '1h':
+        if self.tr == '1d' or self.tr == '1h' or self.tr == '2h':
             start_time = datetime(year=2017, month=1, day=1, hour=0, minute=0)
         elif self.tr == '5m':
             start_time = datetime.now() - timedelta(days=31)
@@ -126,6 +126,8 @@ class BitMexTest(BitMexStub):
 
         left_time = start_time
         right_time = start_time + 99 * delta(tr=self.tr)
+        if self.tr == '2h':
+            right_time = start_time + 99 * delta(tr='1h')
 
         list = []
         while True:
@@ -140,6 +142,9 @@ class BitMexTest(BitMexStub):
 
             left_time = left_time + 100 * delta(tr=self.tr)
             right_time = right_time + 100 * delta(tr=self.tr)
+            if self.tr == '2h':
+                left_time = left_time + 100 * delta(tr='1h')
+                right_time = right_time + 100 * delta(tr='1h')
 
             if left_time < end_time < right_time:
                 right_time = end_time

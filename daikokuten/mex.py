@@ -27,6 +27,9 @@ class BitMex:
         self.periods = periods
         self.run = run
 
+    def get_lot(self):
+        return self.get_balance() * self.get_leverage()
+
     def get_balance(self):
         return self.client.User.User_getWallet(currency="XBt").result()[0]["amount"]
 
@@ -93,12 +96,12 @@ class BitMex:
                                         side=side, orderQty=ord_qty).result()
 
         logger.info(f"========= Create Order ==============")
-        logger.info(f"ID    : {id}")
-        logger.info(f"Type  : {ord_type}")
-        logger.info(f"Side  : {side}")
-        logger.info(f"Qty   : {ord_qty}")
-        logger.info(f"Price : {limit} %")
-        logger.info(f"StopPx: {stop}")
+        logger.info(f"ID     : {id}")
+        logger.info(f"Type   : {ord_type}")
+        logger.info(f"Side   : {side}")
+        logger.info(f"Qty    : {ord_qty}")
+        logger.info(f"Price  : {limit} %")
+        logger.info(f"StopPx : {stop}")
         logger.info(f"======================================")
 
     def cancel(self, long):
@@ -122,8 +125,33 @@ class BitMex:
         return len(self.client.Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0])
 
     def fetch_ohlcv(self, start_time, end_time):
-        return self.client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=self.tr,
+        timeframe = self.tr
+        if self.tr == '2h':
+            timeframe = '1h'
+        ohlc = self.client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=timeframe,
                                                    startTime=start_time, endTime=end_time).result()[0]
+        if self.tr != '2h':
+            return ohlc
+
+        ohlc_2h = []
+        past = []
+        for src in ohlc:
+            time = src['timestamp']
+            if time.hour % 2 == 0 and len(past) != 0:
+                open = past[0]['open']
+                close = past[-1]['close']
+                high = past[0]['high']
+                low = past[0]['low']
+                for p in past:
+                    if high < p['high']:
+                        high = p['high']
+                    if low > p['low']:
+                        low = p['low']
+                ohlc_2h.append({'timestamp': past[0]['timestamp'], 'open': open, 'close': close, 'high': high, 'low': low})
+                past = []
+            else:
+                past.append(src)
+        return ohlc_2h
 
     def __crawler_run(self):
         dt_prev = None
