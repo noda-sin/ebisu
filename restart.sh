@@ -8,4 +8,4 @@ git fetch origin
 git reset --hard origin/master
 
 # restart all service
-systemctl daikokuten restart
+service daikokuten restart
