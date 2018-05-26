@@ -11,8 +11,8 @@ class Doten(Bot):
         length = self.input('length', 9)
         up = highest(high[:-1], length)[-1]
         dn = lowest(low[:-1], length)[-1]
-        self.exchange.entry("Long",  True,  lot, stop=up + 20)
-        self.exchange.entry("Short", False, lot, stop=dn - 20)
+        self.exchange.entry("Long",  True,  lot / 2, stop=up + 20)
+        self.exchange.entry("Short", False, lot / 2, stop=dn - 20)
 
 class Sma(Bot):
     def __init__(self, demo=False, stub=False, test=False, params=None):
