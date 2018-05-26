@@ -28,11 +28,14 @@ class BitMex:
         self.periods = periods
         self.run = run
 
+    def get_retain_rate(self):
+        return 0.7
+
     def get_lot(self):
-        return self.get_balance() * self.get_leverage()
+        return int(self.get_retain_rate() * self.get_balance() / 100000000 * self.get_leverage() * self.get_market_price())
 
     def get_balance(self):
-        return retry(lambda: self.p_client.User.User_getWalletHistory(currency="XBt").result()[0]["amount"])
+        return retry(lambda: self.p_client.User.User_getWallet(currency="XBt").result()[0]["amount"])
 
     def get_leverage(self):
         return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["leverage"])
@@ -103,8 +106,8 @@ class BitMex:
         logger.info(f"Type   : {ord_type}")
         logger.info(f"Side   : {side}")
         logger.info(f"Qty    : {ord_qty}")
-        logger.info(f"Price  : {limit} %")
-        logger.info(f"StopPx : {stop}")
+        logger.info(f"Limit  : {limit}")
+        logger.info(f"Stop   : {stop}")
         logger.info(f"======================================")
 
     def cancel(self, long):
