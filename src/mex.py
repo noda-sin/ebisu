@@ -9,7 +9,7 @@ from datetime import datetime
 import bitmex
 from bravado.exception import HTTPNotFound
 
-from src import logger, delta, gen_ohlcv
+from src import logger, delta, gen_ohlcv, retry
 from src.mex_ws import BitMexWs
 
 
@@ -32,26 +32,26 @@ class BitMex:
         return self.get_balance() * self.get_leverage()
 
     def get_balance(self):
-        return self.p_client.User.User_getWalletHistory(currency="XBt").result()[0]["amount"]
+        return retry(lambda: self.p_client.User.User_getWalletHistory(currency="XBt").result()[0]["amount"])
 
     def get_leverage(self):
-        return self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["leverage"]
+        return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["leverage"])
 
     def get_position_size(self):
-        return self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["currentQty"]
+        return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["currentQty"])
 
     def get_position_avg_price(self):
-        return self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0][
-            "avgEntryPrice"]
+        return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0][
+            "avgEntryPrice"])
 
     def get_market_price(self):
-        return self.client.Instrument.Instrument_get(symbol="XBTUSD").result()[0][0]["lastPrice"]
+        return retry(lambda: self.client.Instrument.Instrument_get(symbol="XBTUSD").result()[0][0]["lastPrice"])
 
     def get_commission(self):
         return 0.075 / 100
 
     def cancel_all(self):
-        orders = self.p_client.Order.Order_cancelAll().result()[0]
+        orders = retry(lambda: self.p_client.Order.Order_cancelAll().result()[0])
         for order in orders:
             logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
                         f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
@@ -59,7 +59,7 @@ class BitMex:
         logger.info(f"Cancel All Order")
 
     def close_all(self):
-        order = self.p_client.Order.Order_closePosition(symbol="XBTUSD").result()[0]
+        order = retry(lambda: self.p_client.Order.Order_closePosition(symbol="XBTUSD").result()[0])
         logger.info(f"Close Position : (orderID, orderType, side, orderQty, limit, stop) = "
                     f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
                     f"{order['price']}, {order['stopPx']})")
@@ -83,20 +83,20 @@ class BitMex:
 
         if limit > 0 and stop > 0:
             ord_type = "StopLimit"
-            self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
-                                        side=side, orderQty=ord_qty, price=limit, stopPx=stop).result()
+            retry(lambda: self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
+                                        side=side, orderQty=ord_qty, price=limit, stopPx=stop).result())
         elif limit > 0:
             ord_type = "Limit"
-            self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
-                                        side=side, orderQty=ord_qty, price=limit).result()
+            retry(lambda: self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
+                                        side=side, orderQty=ord_qty, price=limit).result())
         elif stop > 0:
             ord_type = "Stop"
-            self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
-                                        side=side, orderQty=ord_qty, stopPx=stop).result()
+            retry(lambda: self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
+                                        side=side, orderQty=ord_qty, stopPx=stop).result())
         else:
             ord_type = "Market"
-            self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
-                                        side=side, orderQty=ord_qty).result()
+            retry(lambda: self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
+                                        side=side, orderQty=ord_qty).result())
 
         logger.info(f"========= Create Order ==============")
         logger.info(f"ID     : {id}")
@@ -110,14 +110,14 @@ class BitMex:
     def cancel(self, long):
         side = "Buy" if long else "Sell"
         orders = [order for order in
-                  self.p_client.Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0]
+                  retry(lambda: self.p_client.Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0])
                   if order["side"] == side]
         if len(orders) == 0:
             return
 
         for order in orders:
             try:
-                self.p_client.Order.Order_cancel(orderID=order['orderID']).result()[0][0]
+                retry(lambda: self.p_client.Order.Order_cancel(orderID=order['orderID']).result()[0][0])
             except HTTPNotFound:
                 return
             logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
@@ -125,14 +125,14 @@ class BitMex:
                         f"{order['price']}, {order['stopPx']})")
 
     def get_order_size(self):
-        return len(self.p_client.Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0])
+        return len(retry(lambda: self.p_client.Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0]))
 
     def fetch_ohlcv(self, start_time, end_time):
         bin_size = self.tr
         if self.tr == '2h':
             bin_size = '1h'
-        data = self.client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=bin_size,
-                                                   startTime=start_time, endTime=end_time).result()[0]
+        data = retry(lambda: self.client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=bin_size,
+                                                   startTime=start_time, endTime=end_time).result()[0])
         if self.tr != '2h':
             return data
 

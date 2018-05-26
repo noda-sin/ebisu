@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import timedelta
 
 import pandas as pd
@@ -12,6 +13,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def retry(func, count=5):
+    err = None
+    for i in range(count):
+        try:
+            return func()
+        except Exception as e:
+            err = e
+            time.sleep(pow(2, i+1))
+            continue
+    raise err
 
 class Side:
     Long = "Long"
