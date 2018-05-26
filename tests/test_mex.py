@@ -1,5 +1,7 @@
 import unittest
+from datetime import datetime
 
+from src import delta
 from src.mex import BitMex
 
 
@@ -74,3 +76,9 @@ class TestMex(unittest.TestCase):
         self.mex.close_all()
         pos_size = self.mex.get_position_size()
         self.assertEqual(pos_size, 0)
+
+    def test_fetch_ohlcv(self):
+        start_time = datetime.now() - 10 * delta(tr='2h')
+        end_time   = datetime.now()
+        ohlcv = self.mex.fetch_ohlcv(start_time=start_time, end_time=end_time)
+        print(ohlcv)

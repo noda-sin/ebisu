@@ -2,6 +2,7 @@
 
 import sys
 
+from src import logger
 from src.mex_stub import BitMexStub
 from src.mex_test import BitMexTest
 from src.mex import BitMex
@@ -30,10 +31,16 @@ class Bot:
         pass
 
     def run(self):
+        logger.info(f"Starting Bot")
+        logger.info(f"Strategy : {type(self).__name__}")
+
         self.exchange.on_update(self.strategy)
         self.exchange.show_result()
 
     def close(self):
+        logger.info(f"Stopping Bot")
+
+        self.exchange.stop()
         self.exchange.cancel_all()
         self.exchange.close_all()
         sys.exit()

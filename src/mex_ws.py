@@ -10,7 +10,8 @@ from src import logger
 
 
 class BitMexWs:
-    
+
+    is_running = True
     handlers = {}
     
     def __init__(self):
@@ -25,8 +26,9 @@ class BitMexWs:
         self.wst.start()
         
     def __start(self):
-        while True:
-            self.ws.run_forever()
+        self.ws.run_forever()
+        while self.is_running:
+            pass
 
     def __on_error(self, ws, message):
         logger.error(message)
@@ -65,4 +67,5 @@ class BitMexWs:
             self.handlers['tradeBin1d'] = func
     
     def close(self):
+        self.is_running = False
         self.ws.close()

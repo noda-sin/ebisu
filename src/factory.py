@@ -10,5 +10,5 @@ class BotFactory():
         try:
             cls = getattr(strategy, name)
             return cls(demo=demo, stub=stub, test=test, params=params)
-        except:
+        except Exception as _:
             raise Exception(f"Not Found Strategy : {name}")
