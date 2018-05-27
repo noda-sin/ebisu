@@ -80,13 +80,13 @@ class BitMex:
         if not long and pos_size < 0:
             return
 
-        if self.exist_open_order(long, qty, limit, stop):
+        side = "Buy" if long else "Sell"
+        ord_qty = qty + abs(pos_size)
+
+        if self.exist_open_order(long, ord_qty, limit, stop):
             return
 
         self.cancel(long)
-
-        side = "Buy" if long else "Sell"
-        ord_qty = qty + abs(pos_size)
 
         if limit > 0 and stop > 0:
             ord_type = "StopLimit"
