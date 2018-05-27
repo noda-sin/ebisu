@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from datetime import timedelta
 
@@ -102,12 +103,15 @@ def change_rate(a, b):
         return b / a
 
 
-def lineNotify(message, fileName=None):
+def notify(message, fileName=None):
     logger.info(message)
     url = 'https://notify-api.line.me/api/notify'
-    apikey = os.environ.get('LINE_APIKEY')
+    api_key = os.environ.get('LINE_APIKEY')
+    if api_key is None or len(api_key) == 0:
+        return
+
     payload = {'message': message}
-    headers = {'Authorization': 'Bearer ' + apikey}
+    headers = {'Authorization': 'Bearer ' + api_key}
     if fileName is None:
         try:
             requests.post(url, data=payload, headers=headers)

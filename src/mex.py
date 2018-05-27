@@ -9,7 +9,7 @@ from datetime import datetime
 import bitmex
 from bravado.exception import HTTPNotFound
 
-from src import logger, delta, gen_ohlcv, retry
+from src import logger, delta, gen_ohlcv, retry, notify
 from src.mex_ws import BitMexWs
 
 
@@ -198,6 +198,7 @@ class BitMex:
             except Exception as e:
                 logger.error(e)
                 time.sleep(2)
+                notify(f"An error occurred. {e}")
                 continue
             time.sleep(60)
 

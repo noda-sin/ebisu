@@ -2,7 +2,7 @@
 
 import sys
 
-from src import logger
+from src import logger, notify
 from src.mex_stub import BitMexStub
 from src.mex_test import BitMexTest
 from src.mex import BitMex
