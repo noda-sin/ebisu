@@ -19,9 +19,9 @@ class BitMex:
     listener = None
 
     def __init__(self, tr, periods, demo=False, run=True):
-        apiKey = os.environ.get("BITMEX_TEST_APIKEY") if demo else os.environ.get("BITMEX_APIKEY")
-        secret = os.environ.get("BITMEX_TEST_SECRET") if demo else os.environ.get("BITMEX_SECRET")
-        self.p_client = bitmex.bitmex(test=demo, api_key=apiKey, api_secret=secret)
+        api_key = os.environ.get("BITMEX_TEST_APIKEY") if demo else os.environ.get("BITMEX_APIKEY")
+        api_secret = os.environ.get("BITMEX_TEST_SECRET") if demo else os.environ.get("BITMEX_SECRET")
+        self.p_client = bitmex.bitmex(test=demo, api_key=api_key, api_secret=api_secret)
         self.client = bitmex.bitmex(test=demo)
         self.ws = BitMexWs()
         self.tr = tr
@@ -80,7 +80,11 @@ class BitMex:
         if not long and pos_size < 0:
             return
 
+        if self.exist_open_order(long, qty, limit, stop):
+            return
+
         self.cancel(long)
+
         side = "Buy" if long else "Sell"
         ord_qty = qty + abs(pos_size)
 
@@ -110,11 +114,27 @@ class BitMex:
         logger.info(f"Stop   : {stop}")
         logger.info(f"======================================")
 
-    def cancel(self, long):
+    def get_open_orders(self, long):
         side = "Buy" if long else "Sell"
-        orders = [order for order in
-                  retry(lambda: self.p_client.Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0])
-                  if order["side"] == side]
+        return retry(lambda: self.p_client
+                     .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True, "side": side}))
+                     .result()[0])
+
+    def exist_open_order(self, long, qty, limit=0, stop=0):
+        orders = self.get_open_orders(long)
+        if limit > 0 and stop > 0:
+            return len([order for order in orders
+                        if order['orderQty'] == qty and order['price'] == limit and order['stopPx'] == stop]) > 0
+        elif limit > 0:
+            return len([order for order in orders
+                        if order['orderQty'] == qty and order['price'] == limit and order['stopPx'] is None]) > 0
+        elif stop > 0:
+            return len([order for order in orders
+                        if order['orderQty'] == qty and order['price'] is None and order['stopPx'] == stop]) > 0
+        return False
+
+    def cancel(self, long):
+        orders = self.get_open_orders(long)
         if len(orders) == 0:
             return
 
@@ -128,7 +148,8 @@ class BitMex:
                         f"{order['price']}, {order['stopPx']})")
 
     def get_order_size(self):
-        return len(retry(lambda: self.p_client.Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0]))
+        return len(retry(lambda: self.p_client
+                         .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0]))
 
     def fetch_ohlcv(self, start_time, end_time):
         bin_size = self.tr
@@ -153,19 +174,20 @@ class BitMex:
                         high = p['high']
                     if low > p['low']:
                         low = p['low']
-                data_2h.append({'timestamp': past[0]['timestamp'], 'open': open, 'close': close, 'high': high, 'low': low})
+                data_2h.append({
+                        'timestamp': past[0]['timestamp'],
+                        'open': open,
+                        'close': close,
+                        'high': high,
+                        'low': low
+                    })
                 past = []
             else:
                 past.append(src)
         return data_2h
 
     def __crawler_run(self):
-        dt_prev = None
         while self.is_running:
-            dt_now = datetime.now()
-            if dt_prev is not None and dt_now - dt_prev < delta(self.tr):
-                time.sleep(10)
-                continue
             try:
                 end_time = datetime.now()
                 start_time = end_time - self.periods * delta(tr=self.tr)
@@ -177,7 +199,7 @@ class BitMex:
                 logger.error(e)
                 time.sleep(2)
                 continue
-            dt_prev = dt_now
+            time.sleep(60)
 
     def on_update(self, listener):
         self.listener = listener
@@ -191,4 +213,3 @@ class BitMex:
 
     def show_result(self):
         pass
-
