@@ -26,7 +26,7 @@ BitMex用トレーディングボットプログラム。
 
 ### OSX
 
-```
+```bash
 $ brew install talib
 $ git clone git@github.com:OopsMouse/daikokuten.git
 $ cd daikokuten/
@@ -35,7 +35,7 @@ $ python install -r requirements.txt
 
 ### LINUX
 
-```
+```bash
 $ wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
 $ tar xvzf ta-lib-0.4.0-src.tar.gz
 $ cd ta-lib/
@@ -49,7 +49,7 @@ $ python install -r requirements.txt
 
 ## 実行方法
 
-```
+```bash
 $ python main.py -h
 usage: main.py [-h] [--test] [--stub] [--demo] --strategy STRATEGY
 
@@ -65,7 +65,7 @@ optional arguments:
 
 本番でのトレーディング
 
-```
+```bash
 $ vi ~/.bashrc
 BITMEX_APIKEY=***********
 BITMEX_SECRET=***********
@@ -74,7 +74,7 @@ $ daikokuten --strategy Doten
 
 バックテスト
 
-```
+```bash
 $ vi ~/.bashrc
 BITMEX_TEST_APIKEY=***********
 BITMEX_TEST_SECRET=***********
@@ -86,7 +86,7 @@ $ daikokuten --test --strategy Doten
 以下のように、`src/strategy.py`に新しいクラスを作成してください。
 これは、ランダムにエントリーする実装です。
 
-```
+```python
 class Sample(Bot):
     def __init__(self):
         # 第一引数: 戦略で使う足幅
