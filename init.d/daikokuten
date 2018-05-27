@@ -18,6 +18,8 @@ PID_FILE=/var/run/$DAEMON_NAME.pid
 LOCK_FILE=/var/lock/subsys/$DAEMON_NAME
 LOG_FILE=/var/log/$DAEMON_NAME.log
 
+source /etc/profile.d/env.sh
+
 # ***********************************************
 # ***********************************************
 
