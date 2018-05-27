@@ -9,21 +9,22 @@ from src.mex import BitMex
 
 
 class Bot:
-    def __init__(self, tr, periods, demo=False, stub=False, test=False, params=None):
-        if params is None:
-            params = {}
-        self.params = params
+    params = {}
+    exchange = None
+    tr = '1h'
+    periods = 20
+    test_net = False
+    back_test = False
+    stub_test = False
 
-        if stub:
-            self.exchange = BitMexStub(tr, periods)
-        elif test:
-            self.exchange = BitMexTest(tr, periods)
-        else:
-            self.exchange = BitMex(tr, periods, demo=demo)
+    def __init__(self, tr, periods):
+        self.tr = tr
+        self.periods = periods
 
     def input(self, title, defval):
-        if title in self.params:
-            return self.params[title]
+        p = {} if self.params is None else self.params
+        if title in p:
+            return p[title]
         else:
             return defval
 
@@ -31,6 +32,13 @@ class Bot:
         pass
 
     def run(self):
+        if self.stub_test:
+            self.exchange = BitMexStub(self.tr, self.periods)
+        elif self.back_test:
+            self.exchange = BitMexTest(self.tr, self.periods)
+        else:
+            self.exchange = BitMex(self.tr, self.periods, demo=self.test_net)
+
         logger.info(f"Starting Bot")
         logger.info(f"Strategy : {type(self).__name__}")
 
@@ -38,6 +46,9 @@ class Bot:
         self.exchange.show_result()
 
     def close(self):
+        if self.exchange is None:
+            return
+
         logger.info(f"Stopping Bot")
 
         self.exchange.stop()

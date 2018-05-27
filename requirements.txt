@@ -1,5 +1,4 @@
-Flask
-gunicorn
+matplotlib
 numpy
 ta-lib
 pandas

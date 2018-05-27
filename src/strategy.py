@@ -3,8 +3,8 @@ from src import highest, lowest, sma, crossover, crossunder
 from src.bot import Bot
 
 class Doten(Bot):
-    def __init__(self, demo=False, stub=False, test=False, params=None):
-        Bot.__init__(self, '2h', 15, demo=demo, stub=stub, test=test, params=params)
+    def __init__(self):
+        Bot.__init__(self, '2h', 15)
 
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()
@@ -15,8 +15,8 @@ class Doten(Bot):
         self.exchange.entry("Short", False, round(lot / 2), stop=dn)
 
 class Sma(Bot):
-    def __init__(self, demo=False, stub=False, test=False, params=None):
-        Bot.__init__(self, '2h', 18, demo=demo, stub=stub, test=test, params=params)
+    def __init__(self):
+        Bot.__init__(self, '2h', 18)
 
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()
