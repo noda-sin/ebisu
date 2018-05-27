@@ -77,7 +77,7 @@ stop)
             exit 1
         else
             PID=`cat $PID_FILE`
-            kill -SIGINT $PID
+            kill -HUP $PID
             echo "Stopped [$PID]"
             rm -f $PID_FILE
             rm -f $LOCK_FILE
