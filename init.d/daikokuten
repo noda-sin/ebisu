@@ -32,7 +32,6 @@ case "$1" in
 start)
     if [ -f $PID_FILE ]; then
         PID=`cat $PID_FILE`
-        echo $PID
         if [ -z "`ps axf | grep -w ${PID} | grep -v grep`" ]; then
             start
         else

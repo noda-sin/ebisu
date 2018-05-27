@@ -2,6 +2,7 @@
 # coding: UTF-8
 
 import argparse
+import signal
 
 from src.factory import BotFactory
 
@@ -17,8 +18,6 @@ if __name__ == "__main__":
     bot.run()
 
     if not args.test:
-        try:
-            while True:
-                pass
-        except (KeyboardInterrupt, SystemExit):
-            bot.close()
+        signal.signal(signal.SIGINT, lambda x, y: bot.close())
+        while True:
+            pass
