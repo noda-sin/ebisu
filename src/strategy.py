@@ -4,6 +4,7 @@ import random
 from src import highest, lowest, sma, crossover, crossunder
 from src.bot import Bot
 
+# チャネルブレイクアウト戦略
 class Doten(Bot):
     def __init__(self):
         Bot.__init__(self, '2h', 15)
@@ -16,6 +17,7 @@ class Doten(Bot):
         self.exchange.entry("Long",  True,  round(lot / 2), stop=up)
         self.exchange.entry("Short", False, round(lot / 2), stop=dn)
 
+# SMAクロス戦略
 class SMA(Bot):
     def __init__(self):
         Bot.__init__(self, '2h', 18)
@@ -34,6 +36,7 @@ class SMA(Bot):
         if dead_cross:
             self.exchange.entry("Short", False, lot, limit=market_price)
 
+# サンプル戦略
 class Sample(Bot):
     def __init__(self):
         # 第一引数: 戦略で使う足幅

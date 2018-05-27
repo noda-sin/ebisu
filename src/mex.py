@@ -12,13 +12,23 @@ from bravado.exception import HTTPNotFound
 from src import logger, delta, gen_ohlcv, retry, notify
 from src.mex_ws import BitMexWs
 
-
+# 本番取引用クラス
 class BitMex:
+    # 稼働中
     is_running = True
+    # 時間足を取得するクローラ
     crawler = None
+    # 戦略を実施するリスナー
     listener = None
 
     def __init__(self, tr, periods, demo=False, run=True):
+        """
+        コンストラクタ
+        :param tr:
+        :param periods:
+        :param demo:
+        :param run:
+        """
         api_key = os.environ.get("BITMEX_TEST_APIKEY") if demo else os.environ.get("BITMEX_APIKEY")
         api_secret = os.environ.get("BITMEX_TEST_SECRET") if demo else os.environ.get("BITMEX_SECRET")
         self.p_client = bitmex.bitmex(test=demo, api_key=api_key, api_secret=api_secret)
@@ -29,31 +39,66 @@ class BitMex:
         self.run = run
 
     def get_retain_rate(self):
+        """
+        証拠金維持率。
+        :return:
+        """
         return 0.2
 
     def get_lot(self):
+        """
+        ロットの計算を行う。
+        :return:
+        """
         return int((1 - self.get_retain_rate()) * self.get_balance() / 100000000 * self.get_leverage() * self.get_market_price())
 
     def get_balance(self):
+        """
+        残高の取得を行う。
+        :return:
+        """
         return retry(lambda: self.p_client.User.User_getWallet(currency="XBt").result()[0]["amount"])
 
     def get_leverage(self):
+        """
+        レバレッジの取得する。
+        :return:
+        """
         return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["leverage"])
 
     def get_position_size(self):
+        """
+        現在のポジションサイズを取得する。
+        :return:
+        """
         return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["currentQty"])
 
     def get_position_avg_price(self):
+        """
+        現在のポジションの平均価格を取得する。
+        :return:
+        """
         return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0][
             "avgEntryPrice"])
 
     def get_market_price(self):
+        """
+        現在の取引額を取得する。
+        :return:
+        """
         return retry(lambda: self.client.Instrument.Instrument_get(symbol="XBTUSD").result()[0][0]["lastPrice"])
 
     def get_commission(self):
+        """
+        手数料を取得する。
+        :return:
+        """
         return 0.075 / 100
 
     def cancel_all(self):
+        """
+        すべての注文をキャンセルする。
+        """
         orders = retry(lambda: self.p_client.Order.Order_cancelAll().result()[0])
         for order in orders:
             logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
@@ -62,6 +107,9 @@ class BitMex:
         logger.info(f"Cancel All Order")
 
     def close_all(self):
+        """
+        すべてのポジションを解消する。
+        """
         order = retry(lambda: self.p_client.Order.Order_closePosition(symbol="XBTUSD").result()[0])
         logger.info(f"Close Position : (orderID, orderType, side, orderQty, limit, stop) = "
                     f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
@@ -69,6 +117,17 @@ class BitMex:
         logger.info(f"Close All Position")
 
     def entry(self, id, long, qty, limit=0, stop=0, when=True):
+        """
+        注文をする。pineの関数と同等の機能。
+        https://jp.tradingview.com/study-script-reference/#fun_strategy{dot}entry
+        :param id: 注文の番号
+        :param long: ロング or ショート
+        :param qty: 注文量
+        :param limit: 指値
+        :param stop: ストップ指値
+        :param when: 注文するか
+        :return:
+        """
         if not when:
             return
 
@@ -115,12 +174,25 @@ class BitMex:
         logger.info(f"======================================")
 
     def get_open_orders(self, long):
+        """
+        注文を取得する。
+        :param long: ロング or ショート
+        :return:
+        """
         side = "Buy" if long else "Sell"
         return retry(lambda: self.p_client
                      .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True, "side": side}))
                      .result()[0])
 
     def exist_open_order(self, long, qty, limit=0, stop=0):
+        """
+        同じ注文が存在するか確認する。
+        :param long:  ロング or ショート
+        :param qty: 注文量
+        :param limit: 指値
+        :param stop: ストップ指値
+        :return:
+        """
         orders = self.get_open_orders(long)
         if limit > 0 and stop > 0:
             return len([order for order in orders
@@ -134,6 +206,11 @@ class BitMex:
         return False
 
     def cancel(self, long):
+        """
+        注文をキャンセルする。
+        :param long: ロング or ショート
+        :return:
+        """
         orders = self.get_open_orders(long)
         if len(orders) == 0:
             return
@@ -148,10 +225,20 @@ class BitMex:
                         f"{order['price']}, {order['stopPx']})")
 
     def get_order_size(self):
+        """
+        注文の数を取得する。
+        :return:
+        """
         return len(retry(lambda: self.p_client
                          .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0]))
 
     def fetch_ohlcv(self, start_time, end_time):
+        """
+        足データを取得する
+        :param start_time: 開始時間
+        :param end_time: 終了時間
+        :return:
+        """
         bin_size = self.tr
         if self.tr == '2h':
             bin_size = '1h'
@@ -187,6 +274,9 @@ class BitMex:
         return data_2h
 
     def __crawler_run(self):
+        """
+        データを取得して、戦略を実行する。
+        """
         while self.is_running:
             try:
                 end_time = datetime.now()
@@ -203,14 +293,24 @@ class BitMex:
             time.sleep(60)
 
     def on_update(self, listener):
+        """
+        戦略の関数を登録する。
+        :param listener:
+        """
         self.listener = listener
         if self.run:
             self.crawler = threading.Thread(target=self.__crawler_run)
             self.crawler.start()
 
     def stop(self):
+        """
+        クローラーを止める。
+        """
         self.is_running = False
         self.ws.close()
 
     def show_result(self):
+        """
+        取引結果を表示する。
+        """
         pass

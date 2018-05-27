@@ -13,33 +13,63 @@ from src.mex_stub import BitMexStub
 OHLC_DIRNAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}")
 OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}/ohlc_{}.csv")
 
-
+# バックテスト用クラス
 class BitMexTest(BitMexStub):
+    # 取引価格
     market_price = 0
-
+    # 時間足データ
     ohlcv_data_frame = None
+    # 現在の時間軸
     index = None
+    # 現在の時間
     time = None
+    # 注文数
     order_count = 0
-
+    # 買い履歴
     buy_signals = []
+    # 売り履歴
     sell_signals = []
+    # 残高履歴
     balance_history = []
-
+    # 残高の開始
     start_balance = 0
 
     def __init__(self, tr, periods):
+        """
+        コンストラクタ
+        :param tr:
+        :param periods:
+        """
         BitMexStub.__init__(self, tr, periods, run=False)
         self.load_ohlcv()
         self.start_balance = self.get_balance()
 
     def get_market_price(self):
+        """
+        取引価格を取得する。
+        :return:
+        """
         return self.market_price
 
     def now_time(self):
+        """
+        現在の時間。
+        :return:
+        """
         return self.time
 
     def entry(self, id, long, qty, limit=0, stop=0, when=True):
+        """
+        注文をする。pineの関数と同等の機能。
+        https://jp.tradingview.com/study-script-reference/#fun_strategy{dot}entry
+        :param id: 注文の番号
+        :param long: ロング or ショート
+        :param qty: 注文量
+        :param limit: 指値
+        :param stop: ストップ指値
+        :param when: 注文するか
+        :return:
+        """
         BitMexStub.entry(self, id, long, qty, limit, stop, when)
 
         if long:
@@ -62,10 +92,17 @@ class BitMexTest(BitMexStub):
         self.close_all()
 
     def on_update(self, listener):
+        """
+        戦略の関数を登録する。
+        :param listener:
+        """
         BitMexStub.on_update(self, listener)
         self.__crawler_run()
 
     def clean_ohlcv(self):
+        """
+        データを整形にする。
+        """
         source = []
         for index, row in self.ohlcv_data_frame.iterrows():
             if len(source) == 0:
@@ -99,6 +136,10 @@ class BitMexTest(BitMexStub):
         self.ohlcv_data_frame.index = self.ohlcv_data_frame['timestamp']
 
     def load_ohlcv(self):
+        """
+        データを読み込む。
+        :return:
+        """
         i = 0
         if os.path.exists(OHLC_FILENAME.format(self.tr, i)):
             while True:
@@ -164,6 +205,9 @@ class BitMexTest(BitMexStub):
         self.load_ohlcv()
 
     def show_result(self):
+        """
+        取引結果を表示する。
+        """
         import matplotlib.pyplot as plt
         plt.figure()
         plt.subplot(211)

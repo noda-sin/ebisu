@@ -2,41 +2,78 @@
 from src import logger
 from src.mex import BitMex
 
-
+# スタブ取引用クラス
 class BitMexStub(BitMex):
+    # デフォルトの残高
     balance = 1000
+    # デフォルトのレベレッジ
     leverage = 1
+    # 現在のポジションサイズ
     position_size = 0
+    # 現在のポジション平均価格
     position_avg_price = 0
-
+    # 注文数
     order_count = 0
-
+    # 勝ち数
     win_count = 0
+    # 負け数
     lose_count = 0
-
+    # 勝ちの総利益
     win_profit = 0
+    # 負けの総損失
     lose_loss = 0
-
+    # 最大損失率
     max_draw_down = 0
-
+    # 注文
     open_orders = []
 
     def __init__(self, tr, periods, run=True):
+        """
+        コンストラクタ
+        :param tr:
+        :param periods:
+        :param run:
+        """
         BitMex.__init__(self, tr, periods, run=run)
 
     def get_balance(self):
+        """
+        残高の取得を行う。
+        :return:
+        """
         return self.balance
 
     def get_leverage(self):
+        """
+        レバレッジの取得する。
+        :return:
+        """
         return self.leverage
 
     def get_position_size(self):
+        """
+         現在のポジションサイズを取得する。
+         :return:
+         """
         return self.position_size
 
     def get_position_avg_price(self):
+        """
+        現在のポジションの平均価格を取得する。
+        :return:
+        """
         return self.position_avg_price
 
+    def cancel_all(self):
+        """
+        すべての注文をキャンセルする。
+        """
+        self.open_orders = []
+
     def close_all(self):
+        """
+        すべてのポジションを解消する。
+        """
         pos_size = self.position_size
         if pos_size > 0:
             self.entry("CLOSE", False, abs(pos_size))
@@ -44,12 +81,25 @@ class BitMexStub(BitMex):
             self.entry("CLOSE", True, abs(pos_size))
 
     def cancel(self, id):
+        """
+        注文をキャンセルする。
+        :param long: ロング or ショート
+        :return:
+        """
         self.open_orders = [o for o in self.open_orders if o["id"] != id]
 
-    def cancel_all(self):
-        self.open_orders = []
-
     def entry(self, id, long, qty, limit=0, stop=0, when=True):
+        """
+        注文をする。pineの関数と同等の機能。
+        https://jp.tradingview.com/study-script-reference/#fun_strategy{dot}entry
+        :param id: 注文の番号
+        :param long: ロング or ショート
+        :param qty: 注文量
+        :param limit: 指値
+        :param stop: ストップ指値
+        :param when: 注文するか
+        :return:
+        """
         if not when:
             return
 
@@ -71,6 +121,13 @@ class BitMexStub(BitMex):
             return
 
     def __commit(self, id, long, qty, price):
+        """
+        約定する。
+        :param id: 注文番号
+        :param long: ロング or ショート
+        :param qty: 注文量
+        :param price: 価格
+        """
         self.order_count += 1
 
         order_qty = qty if long else -qty
@@ -122,6 +179,10 @@ class BitMexStub(BitMex):
             self.position_avg_price = 0
 
     def on_update(self, listener):
+        """
+        戦略の関数を登録する。
+        :param listener:
+        """
         def __override_listener(open, close, high, low):
             new_open_orders = []
 
