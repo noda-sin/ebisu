@@ -1,4 +1,6 @@
 # coding: UTF-8
+import random
+
 from src import highest, lowest, sma, crossover, crossunder
 from src.bot import Bot
 
@@ -14,7 +16,7 @@ class Doten(Bot):
         self.exchange.entry("Long",  True,  round(lot / 2), stop=up)
         self.exchange.entry("Short", False, round(lot / 2), stop=dn)
 
-class Sma(Bot):
+class SMA(Bot):
     def __init__(self):
         Bot.__init__(self, '2h', 18)
 
@@ -31,3 +33,18 @@ class Sma(Bot):
             self.exchange.entry("Long", True, lot, limit=market_price)
         if dead_cross:
             self.exchange.entry("Short", False, lot, limit=market_price)
+
+class Sample(Bot):
+    def __init__(self):
+        # 第一引数: 戦略で使う足幅
+        # 第二引数: 戦略で使うデータ期間
+        # 1分足で直近10期間の情報を戦略で必要とする場合
+        Bot.__init__(self, '1m', 10)
+
+    def strategy(self, open, close, high, low):
+        lot = self.exchange.get_lot()
+        which = random.randrange(2)
+        if which == 0:
+            self.exchange.entry("Long", True, lot)
+        else:
+            self.exchange.entry("Short", False, lot)

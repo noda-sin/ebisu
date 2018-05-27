@@ -11,7 +11,7 @@ if __name__ == "__main__":
     parser.add_argument("--test",     default=False,   action="store_true")
     parser.add_argument("--stub",     default=False,   action="store_true")
     parser.add_argument("--demo",     default=False,   action="store_true")
-    parser.add_argument("--strategy", default="doten")
+    parser.add_argument("--strategy", default="doten", required=True)
     args = parser.parse_args()
 
     bot = BotFactory.create(args.strategy, demo=args.demo, stub=args.stub, test=args.test)
