@@ -29,10 +29,10 @@ class BitMex:
         self.run = run
 
     def get_retain_rate(self):
-        return 0.7
+        return 0.2
 
     def get_lot(self):
-        return int(self.get_retain_rate() * self.get_balance() / 100000000 * self.get_leverage() * self.get_market_price())
+        return int((1 - self.get_retain_rate()) * self.get_balance() / 100000000 * self.get_leverage() * self.get_market_price())
 
     def get_balance(self):
         return retry(lambda: self.p_client.User.User_getWallet(currency="XBt").result()[0]["amount"])
