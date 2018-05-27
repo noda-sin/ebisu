@@ -53,5 +53,4 @@ class Bot:
 
         self.exchange.stop()
         self.exchange.cancel_all()
-        self.exchange.close_all()
         sys.exit()
