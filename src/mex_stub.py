@@ -4,8 +4,8 @@ from src.mex import BitMex
 
 # スタブ取引用クラス
 class BitMexStub(BitMex):
-    # デフォルトの残高
-    balance = 1000
+    # デフォルトの残高 (0.1BTC)
+    balance = 0.1 * 100000000
     # デフォルトのレベレッジ
     leverage = 1
     # 現在のポジションサイズ
