@@ -12,8 +12,8 @@ class Doten(Bot):
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()
         length = self.input('length', 9)
-        up = highest(high[:-1], length)[-1]
-        dn = lowest(low[:-1], length)[-1]
+        up = highest(high, length)[-1]
+        dn = lowest(low, length)[-1]
         self.exchange.entry("Long",  True,  round(lot / 2), stop=up)
         self.exchange.entry("Short", False, round(lot / 2), stop=dn)
 

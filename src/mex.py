@@ -283,7 +283,7 @@ class BitMex:
                 start_time = end_time - self.periods * delta(tr=self.tr)
                 source = self.fetch_ohlcv(start_time=start_time, end_time=end_time)
                 if self.listener is not None:
-                    open, close, high, low = gen_ohlcv(source)
+                    open, close, high, low = gen_ohlcv(source[:-1])
                     self.listener(open, close, high, low)
             except Exception as e:
                 logger.error(e)
