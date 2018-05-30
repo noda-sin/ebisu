@@ -166,10 +166,10 @@ class BitMexTest(BitMexStub):
         end_time = datetime.now()
 
         left_time = start_time
-        right_time = start_time + 99 * delta(tr=self.tr)
         if self.tr == '2h':
             right_time = start_time + 99 * delta(tr='1h')
-
+        else:
+            right_time = start_time + 99 * delta(tr=self.tr)
         list = []
         while True:
             try:
@@ -181,11 +181,12 @@ class BitMexTest(BitMexStub):
 
             list.extend(source)
 
-            left_time = left_time + 100 * delta(tr=self.tr)
-            right_time = right_time + 100 * delta(tr=self.tr)
             if self.tr == '2h':
                 left_time = left_time + 100 * delta(tr='1h')
                 right_time = right_time + 100 * delta(tr='1h')
+            else:
+                left_time = left_time + 100 * delta(tr=self.tr)
+                right_time = right_time + 100 * delta(tr=self.tr)
 
             if left_time < end_time < right_time:
                 right_time = end_time
