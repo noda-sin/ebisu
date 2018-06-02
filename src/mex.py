@@ -5,11 +5,13 @@ import os
 import threading
 import time
 from datetime import datetime
+import pandas as pd
 
 import bitmex
 from bravado.exception import HTTPNotFound
+from pytz import UTC
 
-from src import logger, delta, gen_ohlcv, retry, notify
+from src import logger, delta, gen_ohlcv, retry, notify, to_resample_range
 from src.mex_ws import BitMexWs
 
 # 本番取引用クラス
@@ -37,6 +39,9 @@ class BitMex:
         self.tr = tr
         self.periods = periods
         self.run = run
+
+    def now_time(self):
+        return datetime.now().astimezone(UTC)
 
     def get_retain_rate(self):
         """
@@ -239,39 +244,28 @@ class BitMex:
         :param end_time: 終了時間
         :return:
         """
-        bin_size = self.tr
-        if self.tr == '2h':
+        if self.tr.endswith('h'):
             bin_size = '1h'
+        if self.tr.endswith('d'):
+            bin_size = '1d'
+        if self.tr.endswith('m'):
+            bin_size = '1m'
         data = retry(lambda: self.client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=bin_size,
                                                    startTime=start_time, endTime=end_time).result()[0])
-        if self.tr != '2h':
-            return data
-
-        data_2h = []
-        past = []
-        for src in data:
-            timestamp = src['timestamp']
-            if timestamp.hour % 2 == 0 and len(past) != 0:
-                open = past[0]['open']
-                close = past[-1]['close']
-                high = past[0]['high']
-                low = past[0]['low']
-                for p in past:
-                    if high < p['high']:
-                        high = p['high']
-                    if low > p['low']:
-                        low = p['low']
-                data_2h.append({
-                        'timestamp': past[0]['timestamp'],
-                        'open': open,
-                        'close': close,
-                        'high': high,
-                        'low': low
-                    })
-                past = []
-            else:
-                past.append(src)
-        return data_2h
+        data_frame = pd.DataFrame(data, columns=["timestamp", "high", "low", "open", "close", "volume"])
+        data_frame["datetime"] = pd.to_datetime(data_frame["timestamp"], unit="s")
+        data_frame = data_frame.set_index("datetime")
+        pd.to_datetime(data_frame.index, utc=True)
+        data_frame = data_frame.resample(to_resample_range(self.tr)).agg({
+            "timestamp": "last",
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+            "volume": "sum",
+        })
+        data_frame.reset_index()
+        return data_frame.to_dict("records")
 
     def __crawler_run(self):
         """
@@ -312,5 +306,11 @@ class BitMex:
     def show_result(self):
         """
         取引結果を表示する。
+        """
+        pass
+
+    def plot(self, name, value, color):
+        """
+        グラフに描画する。
         """
         pass

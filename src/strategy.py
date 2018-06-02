@@ -1,19 +1,21 @@
 # coding: UTF-8
 import random
 
-from src import highest, lowest, sma, crossover, crossunder
+from src import highest, lowest, sma, crossover, crossunder, last
 from src.bot import Bot
 
 # チャネルブレイクアウト戦略
 class Doten(Bot):
     def __init__(self):
-        Bot.__init__(self, '2h', 15)
+        Bot.__init__(self, '2h', 20)
 
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()
         length = self.input('length', 9)
-        up = highest(high, length)[-1]
-        dn = lowest(low, length)[-1]
+        up = last(highest(high, length))
+        dn = last(lowest(low, length))
+        self.exchange.plot('up', up, 'b')
+        self.exchange.plot('dn', dn, 'r')
         self.exchange.entry("Long",  True,  round(lot / 2), stop=up)
         self.exchange.entry("Short", False, round(lot / 2), stop=dn)
 

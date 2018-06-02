@@ -5,6 +5,7 @@ import time
 from datetime import timedelta, datetime
 
 import pandas as pd
+from pytz import timezone
 
 from src import change_rate, delta, gen_ohlcv, logger
 from src.mex import BitMex
@@ -33,6 +34,8 @@ class BitMexTest(BitMexStub):
     balance_history = []
     # 残高の開始
     start_balance = 0
+    # プロットデータ
+    plot_data = {}
 
     def __init__(self, tr, periods):
         """
@@ -72,6 +75,16 @@ class BitMexTest(BitMexStub):
         """
         BitMexStub.entry(self, id, long, qty, limit, stop, when)
 
+    def commit(self, id, long, qty, price):
+        """
+        約定する。
+        :param id: 注文番号
+        :param long: ロング or ショート
+        :param qty: 注文量
+        :param price: 価格
+        """
+        BitMexStub.commit(self, id, long, qty, price)
+
         if long:
             self.buy_signals.append(self.index)
         else:
@@ -82,7 +95,7 @@ class BitMexTest(BitMexStub):
         for index, row in self.ohlcv_data_frame.iterrows():
             source.append(row)
             self.market_price = row['open']
-            self.time = row['timestamp']
+            self.time = (row['timestamp'] + timedelta(hours=8)).tz_localize('Asia/Tokyo')
             self.index = index
             if len(source) > self.periods:
                 open, close, high, low = gen_ohlcv(source)
@@ -99,7 +112,7 @@ class BitMexTest(BitMexStub):
         BitMexStub.on_update(self, listener)
         self.__crawler_run()
 
-    def clean_ohlcv(self):
+    def shape_ohlcv(self):
         """
         データを整形にする。
         """
@@ -107,7 +120,7 @@ class BitMexTest(BitMexStub):
         for index, row in self.ohlcv_data_frame.iterrows():
             if len(source) == 0:
                 source.append({
-                    'timestamp': row['timestamp'][:-6],
+                    'timestamp': row['timestamp'],
                     'open': row['open'],
                     'close': row['close'],
                     'high': row['high'],
@@ -117,7 +130,7 @@ class BitMexTest(BitMexStub):
 
             prev_row = source[-1]
 
-            timestamp = row['timestamp'][:-6]
+            timestamp = row['timestamp']
             open = prev_row['open'] if change_rate(prev_row['open'], row['open']) > 1.5 else row['open']
             close = prev_row['close'] if change_rate(prev_row['close'], row['close']) > 1.5 else row['close']
             high = prev_row['high'] if change_rate(prev_row['high'], row['high']) > 1.5 else row['high']
@@ -151,13 +164,16 @@ class BitMexTest(BitMexStub):
                     self.ohlcv_data_frame = pd.concat([self.ohlcv_data_frame, pd.read_csv(filename)], ignore_index=True)
                     i += 1
                 else:
-                    self.clean_ohlcv()
+                    self.shape_ohlcv()
                     return
 
-        os.makedirs(OHLC_DIRNAME.format(self.tr))
+        try:
+            os.makedirs(OHLC_DIRNAME.format(self.tr))
+        except:
+            pass
 
         if self.tr == '1d' or self.tr == '1h' or self.tr == '2h':
-            start_time = datetime(year=2017, month=1, day=1, hour=0, minute=0)
+            start_time = datetime(year=2018, month=5, day=20, hour=0, minute=0)
         elif self.tr == '5m':
             start_time = datetime.now() - timedelta(days=31)
         else:
@@ -214,6 +230,8 @@ class BitMexTest(BitMexStub):
         plt.subplot(211)
         plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame["high"])
         plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame["low"])
+        for k, v in self.plot_data.items():
+            plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame[k])
         plt.ylabel("Price(USD)")
         ymin = min(self.ohlcv_data_frame["low"]) - 200
         ymax = max(self.ohlcv_data_frame["high"]) + 200
@@ -225,3 +243,12 @@ class BitMexTest(BitMexStub):
                    xmax=self.ohlcv_data_frame.index[-1], colors='k', linestyles='dashed')
         plt.ylabel("PL(USD)")
         plt.show()
+
+    def plot(self, name, value, color):
+        """
+        グラフに描画する。
+        """
+        self.ohlcv_data_frame.at[self.index, name] = value
+        if name not in self.plot_data:
+            self.plot_data[name] = {'color': color}
+

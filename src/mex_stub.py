@@ -117,10 +117,10 @@ class BitMexStub(BitMex):
         if limit > 0 or stop > 0:
             self.open_orders.append({"id": id, "long": long, "qty": ord_qty, "limit": limit, "stop": stop})
         else:
-            self.__commit(id, long, ord_qty, self.get_market_price())
+            self.commit(id, long, ord_qty, self.get_market_price())
             return
 
-    def __commit(self, id, long, qty, price):
+    def commit(self, id, long, qty, price):
         """
         約定する。
         :param id: 注文番号
@@ -167,6 +167,8 @@ class BitMexStub(BitMex):
 
         if next_qty != 0:
             logger.info(f"********* Create Position ************")
+            logger.info(f"TIME          : {self.now_time()}")
+            logger.info(f"PRICE         : {price}")
             logger.info(f"TRADE COUNT   : {self.order_count}")
             logger.info(f"ID            : {id}")
             logger.info(f"POSITION SIZE : {qty}")
@@ -195,18 +197,18 @@ class BitMexStub(BitMex):
 
                 if limit > 0 and stop > 0:
                     if (long and high[-1] > stop and close[-1] < limit) or (not long and low[-1] < stop and close[-1] > limit):
-                        self.__commit(id, long, qty, limit)
+                        self.commit(id, long, qty, limit)
                         continue
                     elif (long and high[-1] > stop) or (not long and low[-1] < stop):
                         new_open_orders.append({"id": id, "long": long, "qty": qty, "limit": limit, "stop": 0})
                         continue
                 elif limit > 0:
                     if (long and low[-1] < limit) or (not long and high[-1] > limit):
-                        self.__commit(id, long, qty, limit)
+                        self.commit(id, long, qty, limit)
                         continue
                 elif stop > 0:
                     if (long and high[-1] > stop) or (not long and low[-1] < stop):
-                        self.__commit(id, long, qty, stop)
+                        self.commit(id, long, qty, stop)
                         continue
 
                 new_open_orders.append(order)

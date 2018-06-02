@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from datetime import timedelta
+from datetime import timedelta, timezone
 
 import pandas as pd
 import numpy as np
@@ -31,6 +31,11 @@ class Side:
     Close = "Close"
     Unknown = "Unknown"
 
+def first(l=[]):
+    return l[0]
+
+def last(l=[]):
+    return l[-1]
 
 def gen_ohlcv(src):
     open = np.array([v['open'] for _, v in enumerate(src)])
@@ -95,6 +100,13 @@ def delta(tr='1h'):
     else:
         return timedelta(hours=1)
 
+def to_resample_range(tr='1h'):
+    if tr.endswith('h'):
+        return tr[:-1] + 'H'
+    if tr.endswith('d'):
+        return tr[:-1] + 'D'
+    if tr.endswith('m'):
+        return tr[:-1] + 'T'
 
 def change_rate(a, b):
     if a > b:
