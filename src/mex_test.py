@@ -2,13 +2,11 @@
 
 import os
 import time
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 
 import pandas as pd
-from pytz import timezone
 
-from src import change_rate, delta, gen_ohlcv, logger
-from src.mex import BitMex
+from src import change_rate, gen_ohlcv, allowed_range, retry, delta
 from src.mex_stub import BitMexStub
 
 OHLC_DIRNAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}")
@@ -44,7 +42,7 @@ class BitMexTest(BitMexStub):
         :param periods:
         """
         BitMexStub.__init__(self, tr, periods, run=False)
-        self.load_ohlcv()
+        self.__load_ohlcv()
         self.start_balance = self.get_balance()
 
     def get_market_price(self):
@@ -91,6 +89,9 @@ class BitMexTest(BitMexStub):
             self.sell_signals.append(self.index)
 
     def __crawler_run(self):
+        """
+        データを取得して、戦略を実行する。
+        """
         source = []
         for index, row in self.ohlcv_data_frame.iterrows():
             source.append(row)
@@ -112,10 +113,22 @@ class BitMexTest(BitMexStub):
         BitMexStub.on_update(self, listener)
         self.__crawler_run()
 
-    def shape_ohlcv(self):
+    def __load_ohlcv_file(self):
         """
-        データを整形にする。
+        ファイルからデータを読み込む。
         """
+        i = 0
+        while True:
+            filename = OHLC_FILENAME.format(self.tr, i)
+            if os.path.exists(filename) and self.ohlcv_data_frame is None:
+                self.ohlcv_data_frame = pd.read_csv(filename)
+                i += 1
+            elif os.path.exists(filename):
+                self.ohlcv_data_frame = pd.concat([self.ohlcv_data_frame, pd.read_csv(filename)], ignore_index=True)
+                i += 1
+            else:
+                break
+
         source = []
         for index, row in self.ohlcv_data_frame.iterrows():
             if len(source) == 0:
@@ -148,78 +161,62 @@ class BitMexTest(BitMexStub):
         })
         self.ohlcv_data_frame.index = self.ohlcv_data_frame['timestamp']
 
-    def load_ohlcv(self):
+    def __save_ohlcv(self):
+        """
+        データをサーバーから取得する。
+        """
+        os.makedirs(OHLC_DIRNAME.format(self.tr), exist_ok=True)
+
+        if self.tr.endswith('d') or self.tr.endswith('h'):
+            start_time = datetime(year=2017, month=1, day=1, hour=0, minute=0).astimezone(timezone.utc)
+        else:
+            start_time = datetime.now(timezone.utc) - timedelta(days=31)
+
+        end_time = datetime.now(timezone.utc)
+
+        data = []
+        i = 0
+        left_time = None
+        right_time = None
+        source = None
+        is_last_fetch = False
+        while True:
+            if left_time is None:
+                left_time = start_time
+                right_time = left_time + delta(allowed_range[self.tr][0]) * 99
+            else:
+                left_time = source[-1]["timestamp"] + + delta(allowed_range[self.tr][0]) * allowed_range[self.tr][2]
+                right_time = left_time + delta(allowed_range[self.tr][0]) * 99
+
+            if right_time > end_time:
+                right_time = end_time
+                is_last_fetch = True
+
+            source = retry(lambda: self.fetch_ohlcv(start_time=left_time, end_time=right_time))
+
+            data.extend(source)
+
+            if is_last_fetch:
+                df = pd.DataFrame(data)
+                df.to_csv(OHLC_FILENAME.format(self.tr, i))
+                break
+            elif len(data) > 65000:
+                df = pd.DataFrame(data)
+                df.to_csv(OHLC_FILENAME.format(self.tr, i))
+                data = []
+                i += 1
+            time.sleep(2)
+
+    def __load_ohlcv(self):
         """
         データを読み込む。
         :return:
         """
-        i = 0
-        if os.path.exists(OHLC_FILENAME.format(self.tr, i)):
-            while True:
-                filename = OHLC_FILENAME.format(self.tr, i)
-                if os.path.exists(filename) and self.ohlcv_data_frame is None:
-                    self.ohlcv_data_frame = pd.read_csv(filename)
-                    i += 1
-                elif os.path.exists(filename):
-                    self.ohlcv_data_frame = pd.concat([self.ohlcv_data_frame, pd.read_csv(filename)], ignore_index=True)
-                    i += 1
-                else:
-                    self.shape_ohlcv()
-                    return
-
-        try:
-            os.makedirs(OHLC_DIRNAME.format(self.tr))
-        except:
-            pass
-
-        if self.tr == '1d' or self.tr == '1h' or self.tr == '2h':
-            start_time = datetime(year=2018, month=5, day=20, hour=0, minute=0)
-        elif self.tr == '5m':
-            start_time = datetime.now() - timedelta(days=31)
+        if os.path.exists(OHLC_FILENAME.format(self.tr, 0)):
+            self.__load_ohlcv_file()
         else:
-            start_time = datetime.now() - timedelta(days=31)
-
-        end_time = datetime.now()
-
-        left_time = start_time
-        if self.tr == '2h':
-            right_time = start_time + 99 * delta(tr='1h')
-        else:
-            right_time = start_time + 99 * delta(tr=self.tr)
-        list = []
-        while True:
-            try:
-                source = BitMex.fetch_ohlcv(self, start_time=left_time, end_time=right_time)
-            except Exception as e:
-                logger.error(e)
-                time.sleep(60)
-                continue
-
-            list.extend(source)
-
-            if self.tr == '2h':
-                left_time = left_time + 100 * delta(tr='1h')
-                right_time = right_time + 100 * delta(tr='1h')
-            else:
-                left_time = left_time + 100 * delta(tr=self.tr)
-                right_time = right_time + 100 * delta(tr=self.tr)
-
-            if left_time < end_time < right_time:
-                right_time = end_time
-            elif left_time > end_time:
-                df = pd.DataFrame(list)
-                df.to_csv(OHLC_FILENAME.format(self.tr, i))
-                break
-
-            time.sleep(2)
-
-            if len(list) > 65000:
-                df = pd.DataFrame(list)
-                df.to_csv(OHLC_FILENAME.format(self.tr, i))
-                list = []
-                i += 1
-
-        self.load_ohlcv()
+            self.__save_ohlcv()
+            self.__load_ohlcv_file()
 
     def show_result(self):
         """

@@ -1,18 +1,32 @@
 import logging
 import os
 import time
-from datetime import timedelta, timezone
+from datetime import timedelta
 
-import pandas as pd
 import numpy as np
-import talib
+import pandas as pd
 import requests
+import talib
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+allowed_range = {
+    "1m": ["1m", "1T", 1,    1],  "3m": ["1m",  "3T",  3,   3],
+    "5m": ["5m", "5T", 1,    5], "15m": ["5m", "15T",  3,  15], "30m": ["5m", "30T", 6, 30],
+    "1h": ["1h", "1H", 1,   60],  "2h": ["1h",  "2H",  2, 120],
+    "3h": ["1h", "3H", 3,  180],  "4h": ["1h",  "4H",  4, 240],
+    "6h": ["1h", "6H", 6,  360], "12h": ["1h", "12H", 12, 720],
+    "1d": ["1d", "1D", 1, 1440],
+    # not support yet '3d', '1w', '2w', '1m'
+}
+
+def validate_range(r):
+    if r not in allowed_range:
+        raise Exception(f"Range: {r} is not suppert")
 
 def retry(func, count=5):
     err = None
@@ -99,14 +113,6 @@ def delta(tr='1h'):
         return timedelta(hours=2)
     else:
         return timedelta(hours=1)
-
-def to_resample_range(tr='1h'):
-    if tr.endswith('h'):
-        return tr[:-1] + 'H'
-    if tr.endswith('d'):
-        return tr[:-1] + 'D'
-    if tr.endswith('m'):
-        return tr[:-1] + 'T'
 
 def change_rate(a, b):
     if a > b:
