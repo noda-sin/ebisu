@@ -23,11 +23,10 @@ class BitMex:
     # 戦略を実施するリスナー
     listener = None
 
-    def __init__(self, tr, periods, demo=False, run=True):
+    def __init__(self, tr, demo=False, run=True):
         """
         コンストラクタ
         :param tr:
-        :param periods:
         :param demo:
         :param run:
         """
@@ -39,7 +38,6 @@ class BitMex:
         self.client = bitmex.bitmex(test=demo)
         self.ws = BitMexWs()
         self.tr = tr
-        self.periods = periods
         self.run = run
 
     def now_time(self):
@@ -273,7 +271,7 @@ class BitMex:
         while self.is_running:
             try:
                 end_time = datetime.now()
-                start_time = end_time - self.periods * delta(tr=self.tr)
+                start_time = end_time - 90 * delta(allowed_range[self.tr][0]) * allowed_range[self.tr][2]
                 source = self.fetch_ohlcv(start_time=start_time, end_time=end_time)
                 if self.listener is not None:
                     open, close, high, low = gen_ohlcv(source)

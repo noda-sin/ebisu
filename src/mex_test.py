@@ -35,13 +35,13 @@ class BitMexTest(BitMexStub):
     # プロットデータ
     plot_data = {}
 
-    def __init__(self, tr, periods):
+    def __init__(self, tr):
         """
         コンストラクタ
         :param tr:
         :param periods:
         """
-        BitMexStub.__init__(self, tr, periods, run=False)
+        BitMexStub.__init__(self, tr, run=False)
         self.__load_ohlcv()
         self.start_balance = self.get_balance()
 
@@ -98,7 +98,7 @@ class BitMexTest(BitMexStub):
             self.market_price = row['open']
             self.time = (row['timestamp'] + timedelta(hours=8)).tz_localize('Asia/Tokyo')
             self.index = index
-            if len(source) > self.periods:
+            if len(source) > 90:
                 open, close, high, low = gen_ohlcv(source)
                 self.listener(open, close, high, low)
                 source.pop(0)

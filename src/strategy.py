@@ -7,7 +7,7 @@ from src.bot import Bot
 # チャネルブレイクアウト戦略
 class Doten(Bot):
     def __init__(self):
-        Bot.__init__(self, '2h', 20)
+        Bot.__init__(self, '2h')
 
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()
@@ -22,7 +22,7 @@ class Doten(Bot):
 # SMAクロス戦略
 class SMA(Bot):
     def __init__(self):
-        Bot.__init__(self, '2h', 18)
+        Bot.__init__(self, '2h')
 
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()
@@ -42,9 +42,8 @@ class SMA(Bot):
 class Sample(Bot):
     def __init__(self):
         # 第一引数: 戦略で使う足幅
-        # 第二引数: 戦略で使うデータ期間
         # 1分足で直近10期間の情報を戦略で必要とする場合
-        Bot.__init__(self, '1m', 10)
+        Bot.__init__(self, '1m')
 
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()

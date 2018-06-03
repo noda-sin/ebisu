@@ -27,14 +27,13 @@ class BitMexStub(BitMex):
     # 注文
     open_orders = []
 
-    def __init__(self, tr, periods, run=True):
+    def __init__(self, tr, run=True):
         """
         コンストラクタ
         :param tr:
-        :param periods:
         :param run:
         """
-        BitMex.__init__(self, tr, periods, run=run)
+        BitMex.__init__(self, tr, run=run)
 
     def get_balance(self):
         """

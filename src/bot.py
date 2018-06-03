@@ -24,14 +24,13 @@ class Bot:
     # スタブ取引か
     stub_test = False
 
-    def __init__(self, tr, periods):
+    def __init__(self, tr):
         """
         コンストラクタ。
         :param tr: 時間足
         :param periods: 期間
         """
         self.tr = tr
-        self.periods = periods
 
     def input(self, title, defval):
         """
@@ -61,11 +60,11 @@ class Bot:
 ˜       Botを起動する関数。
         """
         if self.stub_test:
-            self.exchange = BitMexStub(self.tr, self.periods)
+            self.exchange = BitMexStub(self.tr)
         elif self.back_test:
-            self.exchange = BitMexTest(self.tr, self.periods)
+            self.exchange = BitMexTest(self.tr)
         else:
-            self.exchange = BitMex(self.tr, self.periods, demo=self.test_net)
+            self.exchange = BitMex(self.tr, demo=self.test_net)
 
         logger.info(f"Starting Bot")
         logger.info(f"Strategy : {type(self).__name__}")
