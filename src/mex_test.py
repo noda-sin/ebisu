@@ -95,7 +95,7 @@ class BitMexTest(BitMexStub):
         source = []
         for index, row in self.ohlcv_data_frame.iterrows():
             source.append(row)
-            self.market_price = row['open']
+            self.market_price = row['close']
             self.time = (row['timestamp'] + timedelta(hours=8)).tz_localize('Asia/Tokyo')
             self.index = index
             if len(source) > 90:

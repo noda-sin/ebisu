@@ -32,11 +32,10 @@ class SMA(Bot):
         slow_sma = sma(close, slow_len)
         golden_cross = crossover(fast_sma, slow_sma)
         dead_cross = crossunder(fast_sma, slow_sma)
-        market_price = self.exchange.get_market_price()
         if golden_cross:
-            self.exchange.entry("Long", True, lot, limit=market_price)
+            self.exchange.entry("Long", True, lot)
         if dead_cross:
-            self.exchange.entry("Short", False, lot, limit=market_price)
+            self.exchange.entry("Short", False, lot)
 
 # サンプル戦略
 class Sample(Bot):
