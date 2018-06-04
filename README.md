@@ -1,6 +1,6 @@
-# 大黒天
+# 恵比寿
 
-<img src="img/daikokuten.png" width="200">
+<img src="img/ebisusama.png" width="200">
 
 BitMex用トレーディングボットプログラム。
 
