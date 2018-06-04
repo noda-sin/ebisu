@@ -12,7 +12,7 @@
 DAEMON_NAME=daikokuten
 DAEMON_DIR=/usr/local/bin/daikokuten
 
-START_SCRIPT="python main.py --strategy Doten"
+START_SCRIPT="python main.py --strategy SMA"
 
 PID_FILE=/var/run/$DAEMON_NAME.pid
 LOCK_FILE=/var/lock/subsys/$DAEMON_NAME
