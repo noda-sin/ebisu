@@ -11,11 +11,17 @@ if __name__ == "__main__":
     parser.add_argument("--test",     default=False,   action="store_true")
     parser.add_argument("--stub",     default=False,   action="store_true")
     parser.add_argument("--demo",     default=False,   action="store_true")
+    parser.add_argument("--hyperopt", default=False,   action="store_true")
     parser.add_argument("--strategy", default="doten", required=True)
     args = parser.parse_args()
 
     # ボットを作成する
-    bot = BotFactory.create(args.strategy, demo=args.demo, stub=args.stub, test=args.test)
+    bot = BotFactory.create(args.strategy, {
+        'demo': args.demo,
+        'stub': args.stub,
+        'test': args.test,
+        'hyperopt': args.hyperopt,
+    })
     # ボットを稼働する
     bot.run()
 

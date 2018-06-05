@@ -2,6 +2,8 @@
 
 import sys
 
+from hyperopt import fmin, tpe
+
 from src import logger
 from src.mex import BitMex
 from src.mex_stub import BitMexStub
@@ -23,6 +25,8 @@ class Bot:
     back_test = False
     # スタブ取引か
     stub_test = False
+    # パラメータ探索か
+    hyperopt = False
 
     def __init__(self, tr):
         """
@@ -32,7 +36,13 @@ class Bot:
         """
         self.tr = tr
 
-    def input(self, title, defval):
+    def options(self):
+        """
+        パレメータ探索用の値を取得する関数。
+        """
+        pass
+
+    def input(self, title, type, defval):
         """
         パレメータを取得する関数。
         :param title: パレメータ名
@@ -41,7 +51,7 @@ class Bot:
         """
         p = {} if self.params is None else self.params
         if title in p:
-            return p[title]
+            return type(p[title])
         else:
             return defval
 
@@ -55,11 +65,28 @@ class Bot:
         """
         pass
 
+    def params_search(self):
+        """
+ ˜      パラメータ検索を行う関数。
+        """
+        def objective(args):
+            self.params = args
+            self.exchange = BitMexTest(self.tr)
+            self.exchange.on_update(self.strategy)
+            return self.exchange.lose_loss/self.exchange.win_profit
+
+        best_params = fmin(objective, self.options(), algo=tpe.suggest, max_evals=100)
+        logger.info(f"Best params is {best_params}")
+
     def run(self):
         """
 ˜       Botを起動する関数。
         """
-        if self.stub_test:
+        if self.hyperopt:
+            self.params_search()
+            return
+
+        elif self.stub_test:
             self.exchange = BitMexStub(self.tr)
         elif self.back_test:
             self.exchange = BitMexTest(self.tr)

@@ -1,6 +1,7 @@
 # coding: UTF-8
 import random
 
+from hyperopt import hp
 from src import highest, lowest, sma, crossover, crossunder, last, stdev, rci
 from src.bot import Bot
 
@@ -9,9 +10,14 @@ class Doten(Bot):
     def __init__(self):
         Bot.__init__(self, '2h')
 
+    def options(self):
+        return {
+            'length': hp.quniform('length', 1, 30, 1),
+        }
+
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()
-        length = self.input('length', 9)
+        length = self.input('length', int, 9)
         up = last(highest(high, length))
         dn = last(lowest(low, length))
         self.exchange.plot('up', up, 'b')
@@ -45,9 +51,9 @@ class Rci(Bot):
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()
 
-        itv_s = 9
-        itv_m = 13
-        itv_l = 15
+        itv_s = self.input('rcv_short_len', 9, )
+        itv_m = self.input('rcv_short_len', 13)
+        itv_l = self.input('rcv_short_len', 15)
 
         rci_s = rci(close, itv_s)
         rci_m = rci(close, itv_m)
@@ -71,23 +77,38 @@ class VixRci(Bot):
     def __init__(self):
         Bot.__init__(self, '5m')
 
+    def options(self):
+        return {
+            'pd'       : hp.quniform('pd', 1, 30, 1),
+            'bbl'      : hp.quniform('bbl', 1, 30, 1),
+            'mult'     : hp.quniform('mult', 1, 30, 1),
+            'lb'       : hp.quniform('lb', 1, 30, 1),
+            'ph'       : hp.quniform('ph', 1, 30, 1),
+            'pl'       : hp.quniform('pl', 1, 30, 1),
+            'rci_limit': hp.quniform('rci_limit', 1, 30, 1),
+            'rci_diff' : hp.quniform('rci_diff', 1, 30, 1),
+            'itvs'     : hp.quniform('itvs', 1, 30, 1),
+            'itvm'     : hp.quniform('itvm', 1, 30, 1),
+            'itvl'     : hp.quniform('itvl', 1, 30, 1),
+        }
+
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()
         pos = self.exchange.get_position_size()
 
-        pd   = 24
-        bbl  = 20
-        mult = 1.9
-        lb   = 88
-        ph   = 0.85
-        pl   = 1.01
+        pd   = self.input('pd',     int,   24)
+        bbl  = self.input('bbl',    int,   20)
+        mult = self.input('mult', float,  1.9)
+        lb   = self.input('lb',     int,   88)
+        ph   = self.input('ph',   float, 0.85)
+        pl   = self.input('pl',   float, 1.01)
 
-        rci_limit = 20
-        rci_diff  = 30
+        rci_limit = self.input('rci_limit', int, 20)
+        rci_diff  = self.input('rci_diff',  int, 30)
 
-        itvs = 9
-        itvm = 36
-        itvl = 55
+        itvs = self.input('itvs', int,  9)
+        itvm = self.input('itvs', int, 36)
+        itvl = self.input('itvs', int, 55)
 
         wvf        = ((highest(close, pd) - low) / (highest(close, pd))) * 100
         s_dev      = mult * stdev(wvf, bbl)
