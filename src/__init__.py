@@ -52,12 +52,8 @@ def last(l=[]):
     return l[-1]
 
 def gen_ohlcv(src):
-    open = np.array([v['open'] for _, v in enumerate(src)])
-    close = np.array([v['close'] for _, v in enumerate(src)])
-    high = np.array([v['high'] for _, v in enumerate(src)])
-    low = np.array([v['low'] for _, v in enumerate(src)])
-    return open, close, high, low
-
+    df = pd.DataFrame(src)
+    return df['open'], df['close'], df['high'], df['low']
 
 def highest(source, period):
     return pd.Series(source).rolling(period).max().as_matrix()
