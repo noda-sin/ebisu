@@ -5,3 +5,4 @@ pandas
 bitmex
 bravado
 websocket-client
+hyperopt
