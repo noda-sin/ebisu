@@ -72,7 +72,7 @@ class Bot:
         self.exchange.on_update(self.strategy)
         self.exchange.show_result()
 
-    def close(self):
+    def stop(self):
         """
 ˜       Botを停止する関数。Openしている注文は、キャンセルする。
         """

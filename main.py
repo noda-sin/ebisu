@@ -21,6 +21,6 @@ if __name__ == "__main__":
 
     if not args.test:
         # 停止処理を登録する
-        signal.signal(signal.SIGINT, lambda x, y: bot.close())
+        signal.signal(signal.SIGINT, lambda x, y: bot.stop())
         while True:
             pass
