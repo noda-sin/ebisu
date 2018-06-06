@@ -70,10 +70,13 @@ class Bot:
  ˜      パラメータ検索を行う関数。
         """
         def objective(args):
+            logger.info(f"Params : {args}")
             self.params = args
             self.exchange = BitMexTest(self.tr)
             self.exchange.on_update(self.strategy)
-            return self.exchange.lose_loss/self.exchange.win_profit
+            profit_factor = self.exchange.win_profit/self.exchange.lose_loss
+            logger.info(f"Profit Factor : {profit_factor}")
+            return 1/profit_factor
 
         best_params = fmin(objective, self.options(), algo=tpe.suggest, max_evals=100)
         logger.info(f"Best params is {best_params}")
