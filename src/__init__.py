@@ -147,19 +147,18 @@ def crossunder(a, b):
     return a[-2] > b[-2] and a[-1] < b[-1]
 
 
-def ord(seq, idx, itv):
+def ord(seq, sort_seq, idx, itv):
     p = seq[idx]
-    o = 1
     for i in range(0, itv):
-        if p < seq[i]:
-            o = o + 1
-    return o
+        if p >= sort_seq[i]:
+            return i+1
 
 
 def d(src, itv):
+    sort_src = np.sort(src)[::-1]
     sum = 0.0
     for i in range(0, itv):
-        sum = sum + pow((i + 1) - ord(src, i, itv), 2)
+        sum += pow((i + 1) - ord(src, sort_src, i, itv), 2)
     return sum
 
 

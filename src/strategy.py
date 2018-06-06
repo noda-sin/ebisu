@@ -1,5 +1,6 @@
 # coding: UTF-8
 import random
+import time
 
 from hyperopt import hp
 from src import highest, lowest, sma, crossover, crossunder, last, stdev, rci
@@ -110,6 +111,7 @@ class VixRci(Bot):
         }
 
     def strategy(self, open, close, high, low):
+
         lot = self.exchange.get_lot()
         pos = self.exchange.get_position_size()
 
@@ -124,10 +126,11 @@ class VixRci(Bot):
         rci_diff = self.input('rci_diff', float, 30)
 
         itvs = self.input('itvs', int, 9)
-        itvm = self.input('itvs', int, 36)
-        itvl = self.input('itvs', int, 55)
+        itvm = self.input('itvm', int, 36)
+        itvl = self.input('itvl', int, 55)
 
-        wvf = ((highest(close, pd) - low) / (highest(close, pd))) * 100
+        hst = highest(close, pd)
+        wvf = (hst - low) / hst * 100
         s_dev = mult * stdev(wvf, bbl)
         mid_line = sma(wvf, bbl)
         lower_band = mid_line - s_dev
@@ -188,7 +191,6 @@ class VixRci(Bot):
             self.exchange.entry("Short", False, lot)
         elif exit_long or exit_short:
             self.exchange.close_all()
-
 
 # サンプル戦略
 class Sample(Bot):

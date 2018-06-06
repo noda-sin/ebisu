@@ -103,10 +103,10 @@ class BitMexTest(BitMexStub):
         for i in range(len(self.ohlcv_data_frame)-length):
             slice = self.ohlcv_data_frame.iloc[i:i+length,:]
             timestamp = slice['timestamp'].iloc[-1]
-            close = slice['close']
-            open = slice['open']
-            high = slice['high']
-            low = slice['low']
+            close = slice['close'].values
+            open = slice['open'].values
+            high = slice['high'].values
+            low = slice['low'].values
 
             self.market_price = close[-1]
             self.time = (timestamp + timedelta(hours=8)).tz_localize('Asia/Tokyo')
