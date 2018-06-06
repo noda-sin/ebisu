@@ -2,7 +2,7 @@
 
 import sys
 
-from hyperopt import fmin, tpe
+from hyperopt import fmin, tpe, STATUS_OK, STATUS_FAIL
 
 from src import logger
 from src.mex import BitMex
@@ -71,14 +71,24 @@ class Bot:
         """
         def objective(args):
             logger.info(f"Params : {args}")
-            self.params = args
-            self.exchange = BitMexTest(self.tr)
-            self.exchange.on_update(self.strategy)
-            profit_factor = self.exchange.win_profit/self.exchange.lose_loss
-            logger.info(f"Profit Factor : {profit_factor}")
-            return 1/profit_factor
+            try:
+                self.params = args
+                self.exchange = BitMexTest(self.tr)
+                self.exchange.on_update(self.strategy)
+                profit_factor = self.exchange.win_profit/self.exchange.lose_loss
+                logger.info(f"Profit Factor : {profit_factor}")
+                ret = {
+                    'status': STATUS_OK,
+                    'loss': 1/profit_factor
+                }
+            except _:
+                ret = {
+                    'status': STATUS_FAIL
+                }
 
-        best_params = fmin(objective, self.options(), algo=tpe.suggest, max_evals=100)
+            return ret
+
+        best_params = fmin(objective, self.options(), algo=tpe.suggest, max_evals=10)
         logger.info(f"Best params is {best_params}")
 
     def run(self):
@@ -89,18 +99,18 @@ class Bot:
         logger.info(f"Strategy : {type(self).__name__}")
 
         if self.hyperopt:
-            logger.info(f"Mode : Hyperopt")
+            logger.info(f"Bot Mode : Hyperopt")
             self.params_search()
             return
 
         elif self.stub_test:
-            logger.info(f"Mode : Stub")
+            logger.info(f"Bot Mode : Stub")
             self.exchange = BitMexStub(self.tr)
         elif self.back_test:
-            logger.info(f"Mode : Back test")
+            logger.info(f"Bot Mode : Back test")
             self.exchange = BitMexTest(self.tr)
         else:
-            logger.info(f"Mode : Trade")
+            logger.info(f"Bot Mode : Trade")
             self.exchange = BitMex(self.tr, demo=self.test_net)
 
         self.exchange.on_update(self.strategy)
