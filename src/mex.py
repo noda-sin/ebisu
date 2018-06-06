@@ -34,13 +34,20 @@ class BitMex:
         """
         validate_range(tr)
 
-        api_key = os.environ.get("BITMEX_TEST_APIKEY") if demo else os.environ.get("BITMEX_APIKEY")
-        api_secret = os.environ.get("BITMEX_TEST_SECRET") if demo else os.environ.get("BITMEX_SECRET")
-        self.p_client = bitmex.bitmex(test=demo, api_key=api_key, api_secret=api_secret)
-        self.client = bitmex.bitmex(test=demo)
-        self.ws = BitMexWs()
+        self.demo = demo
         self.tr = tr
         self.run = run
+
+    def __init_client(self):
+        """
+        初期化関数
+        """
+        if self.p_client is not None and self.client is not None:
+            return
+        api_key = os.environ.get("BITMEX_TEST_APIKEY") if self.demo else os.environ.get("BITMEX_APIKEY")
+        api_secret = os.environ.get("BITMEX_TEST_SECRET") if self.demo else os.environ.get("BITMEX_SECRET")
+        self.p_client = bitmex.bitmex(test=self.demo, api_key=api_key, api_secret=api_secret)
+        self.client = bitmex.bitmex(test=self.demo)
 
     def now_time(self):
         return datetime.now().astimezone(UTC)
@@ -64,6 +71,7 @@ class BitMex:
         残高の取得を行う。
         :return:
         """
+        self.__init_client()
         return retry(lambda: self.p_client.User.User_getWallet(currency="XBt").result()[0]["amount"])
 
     def get_leverage(self):
@@ -71,6 +79,7 @@ class BitMex:
         レバレッジの取得する。
         :return:
         """
+        self.__init_client()
         return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["leverage"])
 
     def get_position_size(self):
@@ -78,6 +87,7 @@ class BitMex:
         現在のポジションサイズを取得する。
         :return:
         """
+        self.__init_client()
         return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["currentQty"])
 
     def get_position_avg_price(self):
@@ -85,6 +95,7 @@ class BitMex:
         現在のポジションの平均価格を取得する。
         :return:
         """
+        self.__init_client()
         return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0][
             "avgEntryPrice"])
 
@@ -93,6 +104,7 @@ class BitMex:
         現在の取引額を取得する。
         :return:
         """
+        self.__init_client()
         return retry(lambda: self.client.Instrument.Instrument_get(symbol="XBTUSD").result()[0][0]["lastPrice"])
 
     def get_commission(self):
@@ -106,6 +118,7 @@ class BitMex:
         """
         すべての注文をキャンセルする。
         """
+        self.__init_client()
         orders = retry(lambda: self.p_client.Order.Order_cancelAll().result()[0])
         for order in orders:
             logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
@@ -117,6 +130,7 @@ class BitMex:
         """
         すべてのポジションを解消する。
         """
+        self.__init_client()
         order = retry(lambda: self.p_client.Order.Order_closePosition(symbol="XBTUSD").result()[0])
         logger.info(f"Close Position : (orderID, orderType, side, orderQty, limit, stop) = "
                     f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
@@ -135,6 +149,8 @@ class BitMex:
         :param when: 注文するか
         :return:
         """
+        self.__init_client()
+
         if not when:
             return
 
@@ -187,6 +203,7 @@ class BitMex:
         :param long: ロング or ショート
         :return:
         """
+        self.__init_client()
         side = "Buy" if long else "Sell"
         return retry(lambda: self.p_client
                      .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True, "side": side}))
@@ -219,6 +236,7 @@ class BitMex:
         :param long: ロング or ショート
         :return:
         """
+        self.__init_client()
         orders = self.get_open_orders(long)
         if len(orders) == 0:
             return
@@ -237,6 +255,7 @@ class BitMex:
         注文の数を取得する。
         :return:
         """
+        self.__init_client()
         return len(retry(lambda: self.p_client
                          .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0]))
 
@@ -247,6 +266,7 @@ class BitMex:
         :param end_time: 終了時間
         :return:
         """
+        self.__init_client()
         bin_size = allowed_range[self.tr][0]
         resample = allowed_range[self.tr][1]
 
@@ -271,6 +291,8 @@ class BitMex:
         """
         データを取得して、戦略を実行する。
         """
+        if self.is_running: # WebSocketの接続
+            self.ws = BitMexWs()
         while self.is_running:
             try:
                 end_time = datetime.now()
