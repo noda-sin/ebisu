@@ -93,18 +93,30 @@ class BitMexTest(BitMexStub):
         """
         データを取得して、戦略を実行する。
         """
-        source = []
-        for index, row in self.ohlcv_data_frame.iterrows():
-            source.append(row)
-            self.market_price = row['close']
-            self.time = (row['timestamp'] + timedelta(hours=8)).tz_localize('Asia/Tokyo')
-            self.index = index
-            if len(source) > 90:
-                open, close, high, low = gen_ohlcv(source)
-                self.listener(open, close, high, low)
-                source.pop(0)
+        length = 90
+
+        start = time.time()
+
+        for i in range(length):
             self.balance_history.append(self.get_balance() - self.start_balance)
+
+        for i in range(len(self.ohlcv_data_frame)-length):
+            slice = self.ohlcv_data_frame.iloc[i:i+length,:]
+            timestamp = slice['timestamp'].iloc[-1]
+            close = slice['close']
+            open = slice['open']
+            high = slice['high']
+            low = slice['low']
+
+            self.market_price = close[-1]
+            self.time = (timestamp + timedelta(hours=8)).tz_localize('Asia/Tokyo')
+            self.index = timestamp
+            self.listener(open, close, high, low)
+            self.balance_history.append(self.get_balance() - self.start_balance)
+
         self.close_all()
+
+        logger.info(f"Back test time : {time.time() - start}")
 
     def on_update(self, listener):
         """
@@ -223,6 +235,14 @@ class BitMexTest(BitMexStub):
         """
         取引結果を表示する。
         """
+        logger.info(f"============== Result ================")
+        logger.info(f"TRADE COUNT   : {self.order_count}")
+        logger.info(f"BALANCE       : {self.get_balance()}")
+        logger.info(f"WIN RATE      : {0 if self.order_count == 0 else self.win_count/self.order_count*100} %")
+        logger.info(f"PROFIT FACTOR : {self.win_profit if self.lose_loss == 0 else self.win_profit/self.lose_loss}")
+        logger.info(f"MAX DRAW DOWN : {self.max_draw_down * 100}")
+        logger.info(f"======================================")
+
         import matplotlib.pyplot as plt
         plt.figure()
         plt.subplot(211)
