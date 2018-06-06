@@ -82,19 +82,23 @@ class Bot:
         """
 ˜       Botを起動する関数。
         """
+        logger.info(f"Starting Bot")
+        logger.info(f"Strategy : {type(self).__name__}")
+
         if self.hyperopt:
+            logger.info(f"Mode : Hyperopt")
             self.params_search()
             return
 
         elif self.stub_test:
+            logger.info(f"Mode : Stub")
             self.exchange = BitMexStub(self.tr)
         elif self.back_test:
+            logger.info(f"Mode : Back test")
             self.exchange = BitMexTest(self.tr)
         else:
+            logger.info(f"Mode : Trade")
             self.exchange = BitMex(self.tr, demo=self.test_net)
-
-        logger.info(f"Starting Bot")
-        logger.info(f"Strategy : {type(self).__name__}")
 
         self.exchange.on_update(self.strategy)
         self.exchange.show_result()

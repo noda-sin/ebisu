@@ -22,6 +22,8 @@ class BitMex:
     crawler = None
     # 戦略を実施するリスナー
     listener = None
+    # ログの出力
+    enable_trade_log = True
 
     def __init__(self, tr, demo=False, run=True):
         """
@@ -169,14 +171,15 @@ class BitMex:
             retry(lambda: self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
                                         side=side, orderQty=ord_qty).result())
 
-        logger.info(f"========= Create Order ==============")
-        logger.info(f"ID     : {id}")
-        logger.info(f"Type   : {ord_type}")
-        logger.info(f"Side   : {side}")
-        logger.info(f"Qty    : {ord_qty}")
-        logger.info(f"Limit  : {limit}")
-        logger.info(f"Stop   : {stop}")
-        logger.info(f"======================================")
+        if self.enable_trade_log:
+            logger.info(f"========= Create Order ==============")
+            logger.info(f"ID     : {id}")
+            logger.info(f"Type   : {ord_type}")
+            logger.info(f"Side   : {side}")
+            logger.info(f"Qty    : {ord_qty}")
+            logger.info(f"Limit  : {limit}")
+            logger.info(f"Stop   : {stop}")
+            logger.info(f"======================================")
 
     def get_open_orders(self, long):
         """
