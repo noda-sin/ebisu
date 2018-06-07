@@ -93,15 +93,13 @@ class BitMexTest(BitMexStub):
         """
         データを取得して、戦略を実行する。
         """
-        length = 90
-
         start = time.time()
 
-        for i in range(length):
+        for i in range(self.ohlcv_len):
             self.balance_history.append((self.get_balance() - self.start_balance)/100000000*self.get_market_price())
 
-        for i in range(len(self.ohlcv_data_frame)-length):
-            slice = self.ohlcv_data_frame.iloc[i:i+length,:]
+        for i in range(len(self.ohlcv_data_frame)-self.ohlcv_len):
+            slice = self.ohlcv_data_frame.iloc[i:i+self.ohlcv_len,:]
             timestamp = slice['timestamp'].iloc[-1]
             close = slice['close'].values
             open = slice['open'].values

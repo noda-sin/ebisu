@@ -4,7 +4,7 @@ import json
 import os
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 import pandas as pd
 
 import bitmex
@@ -28,6 +28,8 @@ class BitMex:
     listener = None
     # ログの出力
     enable_trade_log = True
+    # OHLCの長さ
+    ohlcv_len = 100
 
     def __init__(self, tr, demo=False, run=True):
         """
@@ -299,8 +301,8 @@ class BitMex:
             self.ws = BitMexWs()
         while self.is_running:
             try:
-                end_time = datetime.now()
-                start_time = end_time - 90 * delta(allowed_range[self.tr][0]) * allowed_range[self.tr][2]
+                end_time = datetime.now(timezone.utc)
+                start_time = end_time - (self.ohlcv_len + 1) * delta(allowed_range[self.tr][0]) * allowed_range[self.tr][2]
                 source = self.fetch_ohlcv(start_time=start_time, end_time=end_time)
                 if self.listener is not None:
                     open, close, high, low = gen_ohlcv(source)
@@ -313,7 +315,7 @@ class BitMex:
                 break
             except Exception as e:
                 logger.error(e)
-                time.sleep(2)
+                time.sleep(60)
                 notify(f"An error occurred. {e}")
                 continue
             time.sleep(60)

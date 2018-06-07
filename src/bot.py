@@ -42,6 +42,12 @@ class Bot:
         """
         pass
 
+    def ohlcv_len(self):
+        """
+        戦略にわたすOHLCの長さ
+        """
+        return 100
+
     def input(self, title, type, defval):
         """
         パレメータを取得する関数。
@@ -115,6 +121,7 @@ class Bot:
             logger.info(f"Bot Mode : Trade")
             self.exchange = BitMex(self.tr, demo=self.test_net)
 
+        self.exchange.ohlcv_len = self.ohlcv_len()
         self.exchange.on_update(self.strategy)
         self.exchange.show_result()
 
