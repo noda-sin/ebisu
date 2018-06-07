@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import requests
 import talib
+from bravado.exception import HTTPNotFound, HTTPError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,6 +25,9 @@ allowed_range = {
     # not support yet '3d', '1w', '2w', '1m'
 }
 
+class FatalError(Exception):
+    pass
+
 def validate_range(r):
     if r not in allowed_range:
         raise Exception(f"Range: {r} is not suppert")
@@ -33,10 +37,18 @@ def retry(func, count=5):
     for i in range(count):
         try:
             return func()
-        except Exception as e:
-            err = e
-            time.sleep(pow(2, i+1))
-            continue
+        except HTTPError as error:
+            status_code = error.status_code
+            err = error
+            if status_code >= 500 or status_code == 408:
+                time.sleep(pow(2, i+1))
+                continue
+            elif status_code == 400 or status_code == 409:
+                raise error
+            elif error.status_code == 429:
+                time.sleep(10)
+            elif 400 <= status_code < 500:
+                raise FatalError(error)
     raise err
 
 class Side:

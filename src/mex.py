@@ -11,11 +11,15 @@ import bitmex
 from bravado.exception import HTTPNotFound
 from pytz import UTC
 
-from src import logger, delta, gen_ohlcv, retry, notify, allowed_range, validate_range
+from src import logger, delta, gen_ohlcv, retry, notify, allowed_range, validate_range, FatalError
 from src.mex_ws import BitMexWs
 
 # 本番取引用クラス
 class BitMex:
+    # プライベートAPI用クライアント
+    private_client = None
+    # パブリックAPI用クライアント
+    public_client = None
     # 稼働中
     is_running = True
     # 時間足を取得するクローラ
@@ -42,12 +46,12 @@ class BitMex:
         """
         初期化関数
         """
-        if self.p_client is not None and self.client is not None:
+        if self.private_client is not None and self.public_client is not None:
             return
         api_key = os.environ.get("BITMEX_TEST_APIKEY") if self.demo else os.environ.get("BITMEX_APIKEY")
         api_secret = os.environ.get("BITMEX_TEST_SECRET") if self.demo else os.environ.get("BITMEX_SECRET")
-        self.p_client = bitmex.bitmex(test=self.demo, api_key=api_key, api_secret=api_secret)
-        self.client = bitmex.bitmex(test=self.demo)
+        self.private_client = bitmex.bitmex(test=self.demo, api_key=api_key, api_secret=api_secret)
+        self.public_client = bitmex.bitmex(test=self.demo)
 
     def now_time(self):
         return datetime.now().astimezone(UTC)
@@ -72,7 +76,7 @@ class BitMex:
         :return:
         """
         self.__init_client()
-        return retry(lambda: self.p_client.User.User_getWallet(currency="XBt").result()[0]["amount"])
+        return retry(lambda: self.private_client.User.User_getWallet(currency="XBt").result()[0]["amount"])
 
     def get_leverage(self):
         """
@@ -80,7 +84,7 @@ class BitMex:
         :return:
         """
         self.__init_client()
-        return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["leverage"])
+        return retry(lambda: self.private_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["leverage"])
 
     def get_position_size(self):
         """
@@ -88,7 +92,7 @@ class BitMex:
         :return:
         """
         self.__init_client()
-        return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["currentQty"])
+        return retry(lambda: self.private_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["currentQty"])
 
     def get_position_avg_price(self):
         """
@@ -96,7 +100,7 @@ class BitMex:
         :return:
         """
         self.__init_client()
-        return retry(lambda: self.p_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0][
+        return retry(lambda: self.private_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0][
             "avgEntryPrice"])
 
     def get_market_price(self):
@@ -105,7 +109,7 @@ class BitMex:
         :return:
         """
         self.__init_client()
-        return retry(lambda: self.client.Instrument.Instrument_get(symbol="XBTUSD").result()[0][0]["lastPrice"])
+        return retry(lambda: self.public_client.Instrument.Instrument_get(symbol="XBTUSD").result()[0][0]["lastPrice"])
 
     def get_commission(self):
         """
@@ -119,7 +123,7 @@ class BitMex:
         すべての注文をキャンセルする。
         """
         self.__init_client()
-        orders = retry(lambda: self.p_client.Order.Order_cancelAll().result()[0])
+        orders = retry(lambda: self.private_client.Order.Order_cancelAll().result()[0])
         for order in orders:
             logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
                         f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
@@ -131,7 +135,7 @@ class BitMex:
         すべてのポジションを解消する。
         """
         self.__init_client()
-        order = retry(lambda: self.p_client.Order.Order_closePosition(symbol="XBTUSD").result()[0])
+        order = retry(lambda: self.private_client.Order.Order_closePosition(symbol="XBTUSD").result()[0])
         logger.info(f"Close Position : (orderID, orderType, side, orderQty, limit, stop) = "
                     f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
                     f"{order['price']}, {order['stopPx']})")
@@ -172,20 +176,20 @@ class BitMex:
 
         if limit > 0 and stop > 0:
             ord_type = "StopLimit"
-            retry(lambda: self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
-                                        side=side, orderQty=ord_qty, price=limit, stopPx=stop).result())
+            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
+                                                              side=side, orderQty=ord_qty, price=limit, stopPx=stop).result())
         elif limit > 0:
             ord_type = "Limit"
-            retry(lambda: self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
-                                        side=side, orderQty=ord_qty, price=limit).result())
+            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
+                                                              side=side, orderQty=ord_qty, price=limit).result())
         elif stop > 0:
             ord_type = "Stop"
-            retry(lambda: self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
-                                        side=side, orderQty=ord_qty, stopPx=stop).result())
+            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
+                                                              side=side, orderQty=ord_qty, stopPx=stop).result())
         else:
             ord_type = "Market"
-            retry(lambda: self.p_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
-                                        side=side, orderQty=ord_qty).result())
+            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
+                                                              side=side, orderQty=ord_qty).result())
 
         if self.enable_trade_log:
             logger.info(f"========= Create Order ==============")
@@ -205,7 +209,7 @@ class BitMex:
         """
         self.__init_client()
         side = "Buy" if long else "Sell"
-        return retry(lambda: self.p_client
+        return retry(lambda: self.private_client
                      .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True, "side": side}))
                      .result()[0])
 
@@ -243,7 +247,7 @@ class BitMex:
 
         for order in orders:
             try:
-                retry(lambda: self.p_client.Order.Order_cancel(orderID=order['orderID']).result()[0][0])
+                retry(lambda: self.private_client.Order.Order_cancel(orderID=order['orderID']).result()[0][0])
             except HTTPNotFound:
                 return
             logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
@@ -256,7 +260,7 @@ class BitMex:
         :return:
         """
         self.__init_client()
-        return len(retry(lambda: self.p_client
+        return len(retry(lambda: self.private_client
                          .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0]))
 
     def fetch_ohlcv(self, start_time, end_time):
@@ -270,8 +274,8 @@ class BitMex:
         bin_size = allowed_range[self.tr][0]
         resample = allowed_range[self.tr][1]
 
-        data = retry(lambda: self.client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=bin_size,
-                                                   startTime=start_time, endTime=end_time).result()[0])
+        data = retry(lambda: self.public_client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=bin_size,
+                                                                        startTime=start_time, endTime=end_time).result()[0])
         data_frame = pd.DataFrame(data[:-1], columns=["timestamp", "high", "low", "open", "close", "volume"])
         data_frame["datetime"] = pd.to_datetime(data_frame["timestamp"], unit="s")
         data_frame = data_frame.set_index("datetime")
@@ -301,6 +305,12 @@ class BitMex:
                 if self.listener is not None:
                     open, close, high, low = gen_ohlcv(source)
                     self.listener(open, close, high, low)
+            except FatalError as e:
+                # 致命的エラー
+                logger.error(f"Fatal error. {e}")
+                notify(f"Fatal error occurred. Stopping Bot. {e}")
+                self.stop()
+                break
             except Exception as e:
                 logger.error(e)
                 time.sleep(2)
