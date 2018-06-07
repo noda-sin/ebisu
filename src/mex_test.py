@@ -126,7 +126,7 @@ class BitMexTest(BitMexStub):
         BitMexStub.on_update(self, listener)
         self.__crawler_run()
 
-    def __load_ohlcv_file(self):
+    def __load_ohlcv_file(self, start_time):
         """
         ファイルからデータを読み込む。
         """
@@ -173,17 +173,13 @@ class BitMexTest(BitMexStub):
             'low': source['low']
         })
         self.ohlcv_data_frame.index = self.ohlcv_data_frame['timestamp']
+        self.ohlcv_data_frame = self.ohlcv_data_frame[start_time:]
 
-    def __save_ohlcv(self):
+    def __save_ohlcv(self, start_time):
         """
         データをサーバーから取得する。
         """
         os.makedirs(OHLC_DIRNAME.format(self.tr), exist_ok=True)
-
-        if self.tr.endswith('d') or self.tr.endswith('h'):
-            start_time = datetime(year=2017, month=1, day=1, hour=0, minute=0).astimezone(timezone.utc)
-        else:
-            start_time = datetime.now(timezone.utc) - timedelta(days=31)
 
         end_time = datetime.now(timezone.utc)
 
@@ -225,11 +221,13 @@ class BitMexTest(BitMexStub):
         データを読み込む。
         :return:
         """
+        start_time = datetime.now(timezone.utc) - timedelta(days=31)
+
         if os.path.exists(OHLC_FILENAME.format(self.tr, 0)):
-            self.__load_ohlcv_file()
+            self.__load_ohlcv_file(start_time)
         else:
-            self.__save_ohlcv()
-            self.__load_ohlcv_file()
+            self.__save_ohlcv(start_time)
+            self.__load_ohlcv_file(start_time)
 
     def show_result(self):
         """
