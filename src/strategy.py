@@ -1,8 +1,8 @@
 # coding: UTF-8
 import random
-import time
 
 from hyperopt import hp
+
 from src import highest, lowest, sma, crossover, crossunder, last, stdev, rci
 from src.bot import Bot
 

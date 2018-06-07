@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import requests
 import talib
-from bravado.exception import HTTPNotFound, HTTPError
+from bravado.exception import HTTPError
 
 logging.basicConfig(
     level=logging.INFO,
