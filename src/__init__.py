@@ -65,7 +65,7 @@ def last(l=[]):
 
 def gen_ohlcv(src):
     df = pd.DataFrame(src)
-    return df['open'], df['close'], df['high'], df['low']
+    return df['open'].values, df['close'].values, df['high'].values, df['low'].values
 
 def highest(source, period):
     return pd.Series(source).rolling(period).max().values

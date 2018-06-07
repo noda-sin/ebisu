@@ -275,10 +275,16 @@ class BitMex:
         self.__init_client()
         bin_size = allowed_range[self.tr][0]
         resample = allowed_range[self.tr][1]
-
-        data = retry(lambda: self.public_client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=bin_size,
-                                                                        startTime=start_time, endTime=end_time).result()[0])
-        data_frame = pd.DataFrame(data[:-1], columns=["timestamp", "high", "low", "open", "close", "volume"])
+        data_list = []
+        while True:
+            data = retry(lambda: self.public_client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=bin_size,
+                                                                            startTime=start_time, endTime=end_time, count=500).result()[0])
+            data_list.extend(data)
+            if data[-1]["timestamp"] + delta(bin_size) > end_time:
+                break
+            start_time = data[-1]["timestamp"] + delta(bin_size)
+            time.sleep(2)
+        data_frame = pd.DataFrame(data_list[:-1], columns=["timestamp", "high", "low", "open", "close", "volume"])
         data_frame["datetime"] = pd.to_datetime(data_frame["timestamp"], unit="s")
         data_frame = data_frame.set_index("datetime")
         pd.to_datetime(data_frame.index, utc=True)
