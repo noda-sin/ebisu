@@ -81,14 +81,14 @@ class Bot:
                     'status': STATUS_OK,
                     'loss': 1/profit_factor
                 }
-            except _:
+            except Exception as e:
                 ret = {
                     'status': STATUS_FAIL
                 }
 
             return ret
 
-        best_params = fmin(objective, self.options(), algo=tpe.suggest, max_evals=10)
+        best_params = fmin(objective, self.options(), algo=tpe.suggest, max_evals=200)
         logger.info(f"Best params is {best_params}")
 
     def run(self):

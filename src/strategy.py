@@ -97,12 +97,12 @@ class VixRci(Bot):
 
     def options(self):
         return {
-            'pd': hp.quniform('pd', 1, 30, 1),
-            'bbl': hp.quniform('bbl', 1, 30, 1),
-            'mult': hp.uniform('mult', 0, 3),
-            'lb': hp.quniform('lb', 1, 60, 1),
-            'ph': hp.uniform('ph', 0, 2),
-            'pl': hp.uniform('pl', 0, 2),
+            'pd': hp.quniform('pd', 23, 30, 1),
+            'bbl': hp.quniform('bbl', 20, 30, 1),
+            'mult': hp.uniform('mult', 1, 2.5),
+            'lb': hp.quniform('lb', 80, 100, 1),
+            'ph': hp.uniform('ph', 0, 1),
+            'pl': hp.uniform('pl', 1, 2),
             'rci_limit': hp.quniform('rci_limit', 70, 90, 1),
             'rci_diff': hp.quniform('rci_diff', 10, 40, 1),
             'itvs': hp.quniform('itvs', 1, 30, 1),
@@ -115,19 +115,19 @@ class VixRci(Bot):
         lot = self.exchange.get_lot()
         pos = self.exchange.get_position_size()
 
-        pd = self.input('pd', int, 24)
-        bbl = self.input('bbl', int, 20)
-        mult = self.input('mult', float, 1.9)
-        lb = self.input('lb', int, 88)
-        ph = self.input('ph', float, 0.85)
-        pl = self.input('pl', float, 1.01)
+        pd = self.input('pd', int, 23)
+        bbl = self.input('bbl', int, 21)
+        mult = self.input('mult', float, 1.602143269229707)
+        lb = self.input('lb', int, 95)
+        ph = self.input('ph', float, 0.19099052833148206)
+        pl = self.input('pl', float, 1.4054164079826177)
 
-        rci_limit = self.input('rci_limit', float, 80)
-        rci_diff = self.input('rci_diff', float, 30)
+        rci_limit = self.input('rci_limit', float, 81)
+        rci_diff = self.input('rci_diff', float, 18)
 
-        itvs = self.input('itvs', int, 9)
-        itvm = self.input('itvm', int, 36)
-        itvl = self.input('itvl', int, 55)
+        itvs = self.input('itvs', int, 22)
+        itvm = self.input('itvm', int, 42)
+        itvl = self.input('itvl', int, 59)
 
         hst = highest(close, pd)
         wvf = (hst - low) / hst * 100

@@ -56,19 +56,19 @@ def gen_ohlcv(src):
     return df['open'], df['close'], df['high'], df['low']
 
 def highest(source, period):
-    return pd.Series(source).rolling(period).max().as_matrix()
+    return pd.Series(source).rolling(period).max().values
 
 
 def lowest(source, period):
-    return pd.Series(source).rolling(period).min().as_matrix()
+    return pd.Series(source).rolling(period).min().values
 
 
 def stdev(source, period):
-    return pd.Series(source).rolling(period).std().as_matrix()
+    return pd.Series(source).rolling(period).std().values
 
 
 def sma(source, period):
-    return pd.Series(source).rolling(period).mean().as_matrix()
+    return pd.Series(source).rolling(period).mean().values
 
 
 def ema(source, period):
