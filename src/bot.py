@@ -2,7 +2,7 @@
 
 import sys
 
-from hyperopt import fmin, tpe, STATUS_OK, STATUS_FAIL
+from hyperopt import fmin, tpe, STATUS_OK, STATUS_FAIL, Trials
 
 from src import logger
 from src.mex import BitMex
@@ -88,8 +88,10 @@ class Bot:
 
             return ret
 
-        best_params = fmin(objective, self.options(), algo=tpe.suggest, max_evals=200)
+        trials = Trials()
+        best_params = fmin(objective, self.options(), algo=tpe.suggest, trials=trials, max_evals=200)
         logger.info(f"Best params is {best_params}")
+        logger.info(f"Best profit factor is {1/trials.best_trial['result']['loss']}")
 
     def run(self):
         """

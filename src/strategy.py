@@ -60,16 +60,16 @@ class Rci(Bot):
 
     def options(self):
         return {
-            'rcv_short_len': hp.quniform('rcv_short_len', 1, 30, 1),
-            'rcv_medium_len': hp.quniform('rcv_medium_len', 1, 30, 1),
-            'rcv_long_len': hp.quniform('rcv_long_len', 1, 30, 1),
+            'rcv_short_len': hp.quniform('rcv_short_len', 1, 10, 1),
+            'rcv_medium_len': hp.quniform('rcv_medium_len', 5, 15, 1),
+            'rcv_long_len': hp.quniform('rcv_long_len', 10, 20, 1),
         }
 
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()
 
-        itv_s = self.input('rcv_short_len', int, 9)
-        itv_m = self.input('rcv_medium_len', int, 13)
+        itv_s = self.input('rcv_short_len', int, 5)
+        itv_m = self.input('rcv_medium_len', int, 9)
         itv_l = self.input('rcv_long_len', int, 15)
 
         rci_s = rci(close, itv_s)

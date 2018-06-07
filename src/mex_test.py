@@ -98,7 +98,7 @@ class BitMexTest(BitMexStub):
         start = time.time()
 
         for i in range(length):
-            self.balance_history.append(self.get_balance() - self.start_balance)
+            self.balance_history.append((self.get_balance() - self.start_balance)/100000000*self.get_market_price())
 
         for i in range(len(self.ohlcv_data_frame)-length):
             slice = self.ohlcv_data_frame.iloc[i:i+length,:]
@@ -112,7 +112,7 @@ class BitMexTest(BitMexStub):
             self.time = (timestamp + timedelta(hours=8)).tz_localize('Asia/Tokyo')
             self.index = timestamp
             self.listener(open, close, high, low)
-            self.balance_history.append(self.get_balance() - self.start_balance)
+            self.balance_history.append((self.get_balance() - self.start_balance)/100000000*self.get_market_price())
 
         self.close_all()
 
@@ -238,6 +238,7 @@ class BitMexTest(BitMexStub):
         logger.info(f"============== Result ================")
         logger.info(f"TRADE COUNT   : {self.order_count}")
         logger.info(f"BALANCE       : {self.get_balance()}")
+        logger.info(f"PROFIT RATE   : {self.get_balance()/self.start_balance*100} %")
         logger.info(f"WIN RATE      : {0 if self.order_count == 0 else self.win_count/self.order_count*100} %")
         logger.info(f"PROFIT FACTOR : {self.win_profit if self.lose_loss == 0 else self.win_profit/self.lose_loss}")
         logger.info(f"MAX DRAW DOWN : {self.max_draw_down * 100}")

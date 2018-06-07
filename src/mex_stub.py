@@ -143,14 +143,15 @@ class BitMexStub(BitMex):
                 profit = self.position_size * close_rate
 
             if profit > 0:
-                self.win_profit += profit
+                self.win_profit += profit/self.get_market_price()*100000000
                 self.win_count += 1
             else:
-                self.lose_loss += -1 * profit
+                self.lose_loss += -1 * profit/self.get_market_price()*100000000
                 self.lose_count += 1
                 if close_rate > self.max_draw_down:
                     self.max_draw_down = close_rate
-            self.balance += profit
+
+            self.balance += profit/self.get_market_price()*100000000
 
             if self.enable_trade_log:
                 logger.info(f"========= Close Position =============")
