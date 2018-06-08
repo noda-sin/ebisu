@@ -5,9 +5,9 @@ import sys
 from hyperopt import fmin, tpe, STATUS_OK, STATUS_FAIL, Trials
 
 from src import logger
-from src.mex import BitMex
-from src.mex_stub import BitMexStub
-from src.mex_test import BitMexTest
+from src.bitmex import BitMex
+from src.bitmex_stub import BitMexStub
+from src.bitmex_backtest import BitMexTest
 
 
 class Bot:

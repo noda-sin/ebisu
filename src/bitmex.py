@@ -12,7 +12,7 @@ from bravado.exception import HTTPNotFound
 from pytz import UTC
 
 from src import logger, delta, gen_ohlcv, retry, notify, allowed_range, validate_range, FatalError
-from src.mex_ws import BitMexWs
+from src.bitmex_websocket import BitMexWs
 
 # 本番取引用クラス
 class BitMex:

@@ -1,6 +1,6 @@
 # coding: UTF-8
 from src import logger
-from src.mex import BitMex
+from src.bitmex import BitMex
 
 # スタブ取引用クラス
 class BitMexStub(BitMex):

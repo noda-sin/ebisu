@@ -7,7 +7,7 @@ from datetime import timedelta, datetime, timezone
 import pandas as pd
 
 from src import change_rate, logger, allowed_range, retry, delta
-from src.mex_stub import BitMexStub
+from src.bitmex_stub import BitMexStub
 
 OHLC_DIRNAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}")
 OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}/ohlc_{}.csv")
