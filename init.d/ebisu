@@ -1,18 +1,18 @@
 #!/bin/sh
 
 ### BEGIN INIT INFO
-# Provides:          daikokuten
+# Provides:          ebisu
 # chkconfig:         2345 99 99
 # Required-Start:    $remote_fs $syslog
 # Required-Stop:     $remote_fs $syslog
-# Short-Description: daikokuten
-# Description:       daikokuten
+# Short-Description: ebisu
+# Description:       ebisu
 ### END INIT INFO
 
-DAEMON_NAME=daikokuten
-DAEMON_DIR=/usr/local/bin/daikokuten
+DAEMON_NAME=ebisu
+DAEMON_DIR=/usr/local/bin/ebisu
 
-START_SCRIPT="python main.py --strategy SMA"
+START_SCRIPT="python main.py --strategy VixRci"
 
 PID_FILE=/var/run/$DAEMON_NAME.pid
 LOCK_FILE=/var/lock/subsys/$DAEMON_NAME
