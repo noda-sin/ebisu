@@ -16,17 +16,19 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 allowed_range = {
-    "1m": ["1m", "1T", 1,    1],  "3m": ["1m",  "3T",  3,   3],
-    "5m": ["5m", "5T", 1,    5], "15m": ["5m", "15T",  3,  15], "30m": ["5m", "30T", 6, 30],
-    "1h": ["1h", "1H", 1,   60],  "2h": ["1h",  "2H",  2, 120],
-    "3h": ["1h", "3H", 3,  180],  "4h": ["1h",  "4H",  4, 240],
-    "6h": ["1h", "6H", 6,  360], "12h": ["1h", "12H", 12, 720],
+    "1m": ["1m", "1T", 1, 1], "3m": ["1m", "3T", 3, 3],
+    "5m": ["5m", "5T", 1, 5], "15m": ["5m", "15T", 3, 15], "30m": ["5m", "30T", 6, 30],
+    "1h": ["1h", "1H", 1, 60], "2h": ["1h", "2H", 2, 120],
+    "3h": ["1h", "3H", 3, 180], "4h": ["1h", "4H", 4, 240],
+    "6h": ["1h", "6H", 6, 360], "12h": ["1h", "12H", 12, 720],
     "1d": ["1d", "1D", 1, 1440],
     # not support yet '3d', '1w', '2w', '1m'
 }
 
+
 class FatalError(Exception):
     pass
+
 
 def load_data(file):
     """
@@ -44,10 +46,11 @@ def load_data(file):
     data_frame = data_frame.set_index('timestamp')
     return data_frame.tz_localize(None).tz_localize('UTC', level=0)
 
+
 def validate_continuous(data, bin_size):
     last_date = None
     for i in range(len(data)):
-        index = data.iloc[-1 * (i+1)].name
+        index = data.iloc[-1 * (i + 1)].name
         if last_date is None:
             last_date = index
             continue
@@ -56,11 +59,13 @@ def validate_continuous(data, bin_size):
         last_date = index
     return True, None
 
+
 def to_data_frame(data):
     data_frame = pd.DataFrame(data, columns=["timestamp", "high", "low", "open", "close", "volume"])
     data_frame = data_frame.set_index("timestamp")
     data_frame = data_frame.tz_localize(None).tz_localize('UTC', level=0)
     return data_frame
+
 
 def resample(data_frame, bin_size):
     resample_time = allowed_range[bin_size][1]
@@ -72,6 +77,7 @@ def resample(data_frame, bin_size):
         "volume": "sum",
     })
 
+
 def retry(func, count=5):
     err = None
     for i in range(count):
@@ -81,15 +87,17 @@ def retry(func, count=5):
             status_code = error.status_code
             err = error
             if status_code >= 500 or status_code == 408:
-                time.sleep(pow(2, i+1))
+                time.sleep(pow(2, i + 1))
                 continue
-            elif status_code == 400 or status_code == 409:
-                raise error
-            elif error.status_code == 429:
-                time.sleep(10)
-            elif 400 <= status_code < 500:
+            elif status_code == 400 or \
+                    status_code == 401 or \
+                    status_code == 402 or \
+                    status_code == 403 or \
+                    status_code == 404 or \
+                    status_code == 429:
                 raise FatalError(error)
     raise err
+
 
 class Side:
     Long = "Long"
@@ -97,11 +105,14 @@ class Side:
     Close = "Close"
     Unknown = "Unknown"
 
+
 def first(l=[]):
     return l[0]
 
+
 def last(l=[]):
     return l[-1]
+
 
 def highest(source, period):
     return pd.Series(source).rolling(period).max().values
@@ -146,6 +157,7 @@ def di_minus(high, low, close, period=14):
 def rsi(close, period=14):
     return talib.RSI(close, period)
 
+
 def delta(bin_size='1h'):
     if bin_size.endswith('d'):
         return timedelta(days=allowed_range[bin_size][3])
@@ -153,6 +165,7 @@ def delta(bin_size='1h'):
         return timedelta(hours=allowed_range[bin_size][3])
     elif bin_size.endswith('m'):
         return timedelta(minutes=allowed_range[bin_size][3])
+
 
 def change_rate(a, b):
     if a > b:
@@ -195,7 +208,7 @@ def ord(seq, sort_seq, idx, itv):
     p = seq[idx]
     for i in range(0, itv):
         if p >= sort_seq[i]:
-            return i+1
+            return i + 1
 
 
 def d(src, itv):
