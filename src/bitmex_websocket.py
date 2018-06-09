@@ -6,7 +6,7 @@ import threading
 import websocket
 from datetime import datetime
 
-from src import logger
+from src import logger, to_data_frame
 
 
 class BitMexWs:
@@ -63,7 +63,7 @@ class BitMexWs:
                 ohlc['timestamp'] = datetime.strptime(ohlc['timestamp'][:-5], '%Y-%m-%dT%H:%M:%S')
 
                 if table in self.handlers:
-                    self.handlers[table](ohlc)
+                    self.handlers[table](to_data_frame([ohlc]))
         except Exception as e:
             logger.error(e)
 

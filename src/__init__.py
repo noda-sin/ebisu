@@ -52,9 +52,9 @@ def validate_continuous(data, bin_size):
             last_date = index
             continue
         if last_date - index != delta(bin_size):
-            return False
+            return False, index
         last_date = index
-    return True
+    return True, None
 
 def to_data_frame(data):
     data_frame = pd.DataFrame(data, columns=["timestamp", "high", "low", "open", "close", "volume"])
@@ -62,8 +62,9 @@ def to_data_frame(data):
     data_frame = data_frame.tz_localize(None).tz_localize('UTC', level=0)
     return data_frame
 
-def resample(data_frame, range):
-    return data_frame.resample(range).agg({
+def resample(data_frame, bin_size):
+    resample_time = allowed_range[bin_size][1]
+    return data_frame.resample(resample_time).agg({
         "open": "first",
         "high": "max",
         "low": "min",
@@ -101,10 +102,6 @@ def first(l=[]):
 
 def last(l=[]):
     return l[-1]
-
-def gen_ohlcv(src):
-    df = pd.DataFrame(src)
-    return df['open'].values, df['close'].values, df['high'].values, df['low'].values
 
 def highest(source, period):
     return pd.Series(source).rolling(period).max().values
@@ -164,7 +161,7 @@ def change_rate(a, b):
         return b / a
 
 
-def notify(message, fileName=None):
+def notify(message: object, fileName: object = None) -> object:
     logger.info(message)
     url = 'https://notify-api.line.me/api/notify'
     api_key = os.environ.get('LINE_APIKEY')

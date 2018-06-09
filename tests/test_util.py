@@ -18,8 +18,8 @@ class TestUtil(unittest.TestCase):
     def test_validate_continuous(self):
         file = os.path.join(os.path.dirname(__file__), "./ohlc/discontinuous.csv")
         data = load_data(file)
-        assert not validate_continuous(data, '5m')
+        assert not validate_continuous(data, '5m')[0]
 
         file = os.path.join(os.path.dirname(__file__), "./ohlc/continuous.csv")
         data = load_data(file)
-        assert validate_continuous(data, '5m')
+        assert validate_continuous(data, '5m')[0]

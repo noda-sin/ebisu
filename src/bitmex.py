@@ -2,16 +2,15 @@
 
 import json
 import os
-import threading
-import time
 from datetime import datetime, timezone
 
 import bitmex
+import pandas as pd
 from bravado.exception import HTTPNotFound
 from pytz import UTC
 
-from src import logger, delta, gen_ohlcv, retry, notify, allowed_range, FatalError, to_data_frame, \
-    resample
+from src import logger, retry, allowed_range, to_data_frame, \
+    resample, delta, FatalError, notify
 from src.bitmex_websocket import BitMexWs
 
 
@@ -33,6 +32,8 @@ class BitMex:
     enable_trade_log = True
     # OHLCの長さ
     ohlcv_len = 100
+    # OHLCのキャッシュ
+    data = None
 
     def __init__(self, demo=False, threading=True):
         """
@@ -273,41 +274,51 @@ class BitMex:
         """
         self.__init_client()
         fetch_bin_size = allowed_range[bin_size][0]
-        resample_time = allowed_range[bin_size][1]
         data = retry(lambda: self.public_client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=fetch_bin_size,
                                                                         startTime=start_time, endTime=end_time,
                                                                         count=500, partial=False).result()[0])
         data_frame = to_data_frame(data)
-        return resample(data_frame, resample_time)
+        return resample(data_frame, bin_size)
 
-    def __crawler_run(self):
+    def __update(self, new_data):
         """
         データを取得して、戦略を実行する。
         """
-        bin_size = self.bin_size
 
-        if self.is_running: # WebSocketの接続
-            self.ws = BitMexWs()
-        while self.is_running:
-            try:
-                end_time = datetime.now(timezone.utc)
-                start_time = end_time - (self.ohlcv_len + 1) * delta(allowed_range[bin_size][0]) * allowed_range[bin_size][2]
-                source = self.fetch_ohlcv(bin_size, start_time, end_time)
-                if self.listener is not None:
-                    open, close, high, low = gen_ohlcv(source)
-                    self.listener(open, close, high, low)
-            except FatalError as e:
-                # 致命的エラー
-                logger.error(f"Fatal error. {e}")
-                notify(f"Fatal error occurred. Stopping Bot. {e}")
-                self.stop()
-                break
-            except Exception as e:
-                logger.error(e)
-                time.sleep(60)
-                notify(f"An error occurred. {e}")
-                continue
-            time.sleep(60)
+        if self.data is None:
+            end_time = datetime.now(timezone.utc)
+            start_time = end_time - self.ohlcv_len * delta(self.bin_size)
+            d1 = self.fetch_ohlcv(self.bin_size, start_time, end_time)
+            if len(d1) > 0:
+                d2 = self.fetch_ohlcv(allowed_range[self.bin_size][0],
+                                      d1.iloc[-1].name + delta(allowed_range[self.bin_size][0]), end_time)
+                self.data = pd.concat([d1, d2])
+            else:
+                self.data = d1
+            resample_data = self.data
+        else:
+            self.data = pd.concat([self.data, new_data])
+            resample_data = resample(self.data, self.bin_size)
+
+        if self.data.iloc[-1].name == resample_data.iloc[-1].name:
+            self.data = resample_data.iloc[-1*self.ohlcv_len:,:]
+
+        open = resample_data['open'].values
+        close = resample_data['close'].values
+        high = resample_data['high'].values
+        low = resample_data['low'].values
+
+        try:
+            if self.listener is not None:
+                self.listener(open, close, high, low)
+        except FatalError as e:
+            # 致命的エラー
+            logger.error(f"Fatal error. {e}")
+            notify(f"Fatal error occurred. Stopping Bot. {e}")
+            self.stop()
+        except Exception as e:
+            logger.error(e)
+            notify(f"An error occurred. {e}")
 
     def on_update(self, bin_size, listener):
         """
@@ -317,8 +328,8 @@ class BitMex:
         self.bin_size = bin_size
         self.listener = listener
         if self.is_running:
-            self.crawler = threading.Thread(target=self.__crawler_run)
-            self.crawler.start()
+            self.ws = BitMexWs()
+            self.ws.on_update(allowed_range[bin_size][0], self.__update)
 
     def stop(self):
         """
