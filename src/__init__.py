@@ -28,9 +28,48 @@ allowed_range = {
 class FatalError(Exception):
     pass
 
-def validate_range(r):
-    if r not in allowed_range:
-        raise Exception(f"Range: {r} is not suppert")
+def load_data(file):
+    """
+    ファイルからデータを読み込む。
+    """
+    source = pd.read_csv(file)
+    data_frame = pd.DataFrame({
+        'timestamp': pd.to_datetime(source['timestamp']),
+        'open': source['open'],
+        'close': source['close'],
+        'high': source['high'],
+        'low': source['low'],
+        'volume': source['volume']
+    })
+    data_frame = data_frame.set_index('timestamp')
+    return data_frame.tz_localize(None).tz_localize('UTC', level=0)
+
+def validate_continuous(data, bin_size):
+    last_date = None
+    for i in range(len(data)):
+        index = data.iloc[-1 * (i+1)].name
+        if last_date is None:
+            last_date = index
+            continue
+        if last_date - index != delta(bin_size):
+            return False
+        last_date = index
+    return True
+
+def to_data_frame(data):
+    data_frame = pd.DataFrame(data, columns=["timestamp", "high", "low", "open", "close", "volume"])
+    data_frame = data_frame.set_index("timestamp")
+    data_frame = data_frame.tz_localize(None).tz_localize('UTC', level=0)
+    return data_frame
+
+def resample(data_frame, range):
+    return data_frame.resample(range).agg({
+        "open": "first",
+        "high": "max",
+        "low": "min",
+        "close": "last",
+        "volume": "sum",
+    })
 
 def retry(func, count=5):
     err = None
@@ -110,17 +149,13 @@ def di_minus(high, low, close, period=14):
 def rsi(close, period=14):
     return talib.RSI(close, period)
 
-def delta(tr='1h'):
-    if tr == '1d':
-        return timedelta(days=1)
-    elif tr == '5m':
-        return timedelta(minutes=5)
-    elif tr == '1m':
-        return timedelta(minutes=1)
-    elif tr == '2h':
-        return timedelta(hours=2)
-    else:
-        return timedelta(hours=1)
+def delta(bin_size='1h'):
+    if bin_size.endswith('d'):
+        return timedelta(days=allowed_range[bin_size][3])
+    elif bin_size.endswith('h'):
+        return timedelta(hours=allowed_range[bin_size][3])
+    elif bin_size.endswith('m'):
+        return timedelta(minutes=allowed_range[bin_size][3])
 
 def change_rate(a, b):
     if a > b:

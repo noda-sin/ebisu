@@ -27,13 +27,12 @@ class BitMexStub(BitMex):
     # 注文
     open_orders = []
 
-    def __init__(self, tr, run=True):
+    def __init__(self, threading=True):
         """
         コンストラクタ
-        :param tr:
-        :param run:
+        :param threading:
         """
-        BitMex.__init__(self, tr, run=run)
+        BitMex.__init__(self, threading=threading)
 
     def get_balance(self):
         """
@@ -182,7 +181,7 @@ class BitMexStub(BitMex):
             self.position_size = 0
             self.position_avg_price = 0
 
-    def on_update(self, listener):
+    def on_update(self, bin_size, listener):
         """
         戦略の関数を登録する。
         :param listener:
@@ -218,4 +217,4 @@ class BitMexStub(BitMex):
             self.open_orders = new_open_orders
             listener(open, close, high, low)
 
-        BitMex.on_update(self, __override_listener)
+        BitMex.on_update(self, bin_size, __override_listener)

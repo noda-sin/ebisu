@@ -5,17 +5,20 @@ import os
 import threading
 import time
 from datetime import datetime, timezone
-import pandas as pd
 
 import bitmex
 from bravado.exception import HTTPNotFound
 from pytz import UTC
 
-from src import logger, delta, gen_ohlcv, retry, notify, allowed_range, validate_range, FatalError
+from src import logger, delta, gen_ohlcv, retry, notify, allowed_range, FatalError, to_data_frame, \
+    resample
 from src.bitmex_websocket import BitMexWs
+
 
 # 本番取引用クラス
 class BitMex:
+    # 利用する時間足
+    bin_size = '1h'
     # プライベートAPI用クライアント
     private_client = None
     # パブリックAPI用クライアント
@@ -31,18 +34,14 @@ class BitMex:
     # OHLCの長さ
     ohlcv_len = 100
 
-    def __init__(self, tr, demo=False, run=True):
+    def __init__(self, demo=False, threading=True):
         """
         コンストラクタ
-        :param tr:
         :param demo:
         :param run:
         """
-        validate_range(tr)
-
         self.demo = demo
-        self.tr = tr
-        self.run = run
+        self.is_running = threading
 
     def __init_client(self):
         """
@@ -265,7 +264,7 @@ class BitMex:
         return len(retry(lambda: self.private_client
                          .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0]))
 
-    def fetch_ohlcv(self, start_time, end_time):
+    def fetch_ohlcv(self, bin_size, start_time, end_time):
         """
         足データを取得する
         :param start_time: 開始時間
@@ -273,43 +272,27 @@ class BitMex:
         :return:
         """
         self.__init_client()
-        bin_size = allowed_range[self.tr][0]
-        resample = allowed_range[self.tr][1]
-        data_list = []
-        while True:
-            data = retry(lambda: self.public_client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=bin_size,
-                                                                            startTime=start_time, endTime=end_time, count=500).result()[0])
-            data_list.extend(data)
-            if data[-1]["timestamp"] + delta(bin_size) > end_time:
-                break
-            start_time = data[-1]["timestamp"] + delta(bin_size)
-            time.sleep(2)
-        data_frame = pd.DataFrame(data_list[:-1], columns=["timestamp", "high", "low", "open", "close", "volume"])
-        data_frame["datetime"] = pd.to_datetime(data_frame["timestamp"], unit="s")
-        data_frame = data_frame.set_index("datetime")
-        pd.to_datetime(data_frame.index, utc=True)
-        data_frame = data_frame.resample(resample).agg({
-            "timestamp": "last",
-            "open": "first",
-            "high": "max",
-            "low": "min",
-            "close": "last",
-            "volume": "sum",
-        })
-        data_frame.reset_index()
-        return data_frame.to_dict("records")
+        fetch_bin_size = allowed_range[bin_size][0]
+        resample_time = allowed_range[bin_size][1]
+        data = retry(lambda: self.public_client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=fetch_bin_size,
+                                                                        startTime=start_time, endTime=end_time,
+                                                                        count=500, partial=False).result()[0])
+        data_frame = to_data_frame(data)
+        return resample(data_frame, resample_time)
 
     def __crawler_run(self):
         """
         データを取得して、戦略を実行する。
         """
+        bin_size = self.bin_size
+
         if self.is_running: # WebSocketの接続
             self.ws = BitMexWs()
         while self.is_running:
             try:
                 end_time = datetime.now(timezone.utc)
-                start_time = end_time - (self.ohlcv_len + 1) * delta(allowed_range[self.tr][0]) * allowed_range[self.tr][2]
-                source = self.fetch_ohlcv(start_time=start_time, end_time=end_time)
+                start_time = end_time - (self.ohlcv_len + 1) * delta(allowed_range[bin_size][0]) * allowed_range[bin_size][2]
+                source = self.fetch_ohlcv(bin_size, start_time, end_time)
                 if self.listener is not None:
                     open, close, high, low = gen_ohlcv(source)
                     self.listener(open, close, high, low)
@@ -326,13 +309,14 @@ class BitMex:
                 continue
             time.sleep(60)
 
-    def on_update(self, listener):
+    def on_update(self, bin_size, listener):
         """
         戦略の関数を登録する。
         :param listener:
         """
+        self.bin_size = bin_size
         self.listener = listener
-        if self.run:
+        if self.is_running:
             self.crawler = threading.Thread(target=self.__crawler_run)
             self.crawler.start()
 

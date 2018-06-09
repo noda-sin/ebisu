@@ -7,7 +7,7 @@ from hyperopt import fmin, tpe, STATUS_OK, STATUS_FAIL, Trials
 from src import logger
 from src.bitmex import BitMex
 from src.bitmex_stub import BitMexStub
-from src.bitmex_backtest import BitMexTest
+from src.bitmex_backtest import BitMexBackTest
 
 
 class Bot:
@@ -16,7 +16,7 @@ class Bot:
     # 取引所
     exchange = None
     # 時間足
-    tr = '1h'
+    bin_size = '1h'
     # 足の期間
     periods = 20
     # テストネットを利用するか
@@ -28,13 +28,13 @@ class Bot:
     # パラメータ探索か
     hyperopt = False
 
-    def __init__(self, tr):
+    def __init__(self, bin_size):
         """
         コンストラクタ。
-        :param tr: 時間足
+        :param bin_size: 時間足
         :param periods: 期間
         """
-        self.tr = tr
+        self.bin_size = bin_size
 
     def options(self):
         """
@@ -79,7 +79,7 @@ class Bot:
             logger.info(f"Params : {args}")
             try:
                 self.params = args
-                self.exchange = BitMexTest(self.tr)
+                self.exchange = BitMexBackTest(self.tr)
                 self.exchange.on_update(self.strategy)
                 profit_factor = self.exchange.win_profit/self.exchange.lose_loss
                 logger.info(f"Profit Factor : {profit_factor}")
@@ -113,16 +113,16 @@ class Bot:
 
         elif self.stub_test:
             logger.info(f"Bot Mode : Stub")
-            self.exchange = BitMexStub(self.tr)
+            self.exchange = BitMexStub()
         elif self.back_test:
             logger.info(f"Bot Mode : Back test")
-            self.exchange = BitMexTest(self.tr)
+            self.exchange = BitMexBackTest()
         else:
             logger.info(f"Bot Mode : Trade")
-            self.exchange = BitMex(self.tr, demo=self.test_net)
+            self.exchange = BitMex(demo=self.test_net)
 
         self.exchange.ohlcv_len = self.ohlcv_len()
-        self.exchange.on_update(self.strategy)
+        self.exchange.on_update(self.bin_size, self.strategy)
         self.exchange.show_result()
 
     def stop(self):

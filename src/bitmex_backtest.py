@@ -6,14 +6,13 @@ from datetime import timedelta, datetime, timezone
 
 import pandas as pd
 
-from src import change_rate, logger, allowed_range, retry, delta
+from src import logger, allowed_range, retry, delta, load_data
 from src.bitmex_stub import BitMexStub
 
 OHLC_DIRNAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}")
-OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}/ohlc_{}.csv")
+OHLC_FILENAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}/data.csv")
 
-# バックテスト用クラス
-class BitMexTest(BitMexStub):
+class BitMexBackTest(BitMexStub):
     # 取引価格
     market_price = 0
     # 時間足データ
@@ -35,14 +34,12 @@ class BitMexTest(BitMexStub):
     # プロットデータ
     plot_data = {}
 
-    def __init__(self, tr):
+    def __init__(self):
         """
         コンストラクタ
-        :param tr:
         :param periods:
         """
-        BitMexStub.__init__(self, tr, run=False)
-        self.__load_ohlcv()
+        BitMexStub.__init__(self, threading=False)
         self.enable_trade_log = False
         self.start_balance = self.get_balance()
 
@@ -100,14 +97,14 @@ class BitMexTest(BitMexStub):
 
         for i in range(len(self.ohlcv_data_frame)-self.ohlcv_len):
             slice = self.ohlcv_data_frame.iloc[i:i+self.ohlcv_len,:]
-            timestamp = slice['timestamp'].iloc[-1]
+            timestamp = slice.iloc[-1].name
             close = slice['close'].values
             open = slice['open'].values
             high = slice['high'].values
             low = slice['low'].values
 
             self.market_price = close[-1]
-            self.time = (timestamp + timedelta(hours=8)).tz_localize('Asia/Tokyo')
+            self.time = timestamp.tz_convert('Asia/Tokyo')
             self.index = timestamp
             self.listener(open, close, high, low)
             self.balance_history.append((self.get_balance() - self.start_balance)/100000000*self.get_market_price())
@@ -116,116 +113,64 @@ class BitMexTest(BitMexStub):
 
         logger.info(f"Back test time : {time.time() - start}")
 
-    def on_update(self, listener):
+    def on_update(self, bin_size, listener):
         """
         戦略の関数を登録する。
         :param listener:
         """
-        BitMexStub.on_update(self, listener)
+        self.__load_ohlcv(bin_size)
+
+        BitMexStub.on_update(self, bin_size, listener)
         self.__crawler_run()
 
-    def __load_ohlcv_file(self, start_time):
-        """
-        ファイルからデータを読み込む。
-        """
-        i = 0
-        while True:
-            filename = OHLC_FILENAME.format(self.tr, i)
-            if os.path.exists(filename) and self.ohlcv_data_frame is None:
-                self.ohlcv_data_frame = pd.read_csv(filename)
-                i += 1
-            elif os.path.exists(filename):
-                self.ohlcv_data_frame = pd.concat([self.ohlcv_data_frame, pd.read_csv(filename)], ignore_index=True)
-                i += 1
-            else:
-                break
-
-        source = []
-        for index, row in self.ohlcv_data_frame.iterrows():
-            if len(source) == 0:
-                source.append({
-                    'timestamp': row['timestamp'],
-                    'open': row['open'],
-                    'close': row['close'],
-                    'high': row['high'],
-                    'low': row['low']
-                })
-                continue
-
-            prev_row = source[-1]
-
-            timestamp = row['timestamp']
-            open = prev_row['open'] if change_rate(prev_row['open'], row['open']) > 1.5 else row['open']
-            close = prev_row['close'] if change_rate(prev_row['close'], row['close']) > 1.5 else row['close']
-            high = prev_row['high'] if change_rate(prev_row['high'], row['high']) > 1.5 else row['high']
-            low = row['low']
-
-            source.append({'timestamp': timestamp, 'open': open, 'close': close, 'high': high, 'low': low})
-
-        source = pd.DataFrame(source)
-        self.ohlcv_data_frame = pd.DataFrame({
-            'timestamp': pd.to_datetime(source['timestamp']),
-            'open': source['open'],
-            'close': source['close'],
-            'high': source['high'],
-            'low': source['low']
-        })
-        self.ohlcv_data_frame.index = self.ohlcv_data_frame['timestamp']
-        self.ohlcv_data_frame = self.ohlcv_data_frame[start_time:]
-
-    def __save_ohlcv(self, start_time):
+    def download_data(self, file, bin_size, start_time, end_time):
         """
         データをサーバーから取得する。
         """
-        os.makedirs(OHLC_DIRNAME.format(self.tr), exist_ok=True)
+        if not os.path.exists(os.path.dirname(file)):
+            os.makedirs(os.path.dirname(file))
 
-        end_time = datetime.now(timezone.utc)
-
-        data = []
-        i = 0
+        data = pd.DataFrame()
         left_time = None
         right_time = None
         source = None
         is_last_fetch = False
+
         while True:
             if left_time is None:
                 left_time = start_time
-                right_time = left_time + delta(allowed_range[self.tr][0]) * 99
+                right_time = left_time + delta(allowed_range[bin_size][0]) * 99
             else:
-                left_time = source[-1]["timestamp"] + + delta(allowed_range[self.tr][0]) * allowed_range[self.tr][2]
-                right_time = left_time + delta(allowed_range[self.tr][0]) * 99
+                left_time = source.iloc[-1].name + + delta(allowed_range[bin_size][0]) * allowed_range[bin_size][2]
+                right_time = left_time + delta(allowed_range[bin_size][0]) * 99
 
             if right_time > end_time:
                 right_time = end_time
                 is_last_fetch = True
 
-            source = retry(lambda: self.fetch_ohlcv(start_time=left_time, end_time=right_time))
-
-            data.extend(source)
+            source = retry(lambda: self.fetch_ohlcv(bin_size=bin_size, start_time=left_time, end_time=right_time))
+            data = pd.concat([data, source])
 
             if is_last_fetch:
-                df = pd.DataFrame(data)
-                df.to_csv(OHLC_FILENAME.format(self.tr, i))
+                data.to_csv(file)
                 break
-            elif len(data) > 65000:
-                df = pd.DataFrame(data)
-                df.to_csv(OHLC_FILENAME.format(self.tr, i))
-                data = []
-                i += 1
+
             time.sleep(2)
 
-    def __load_ohlcv(self):
+    def __load_ohlcv(self, bin_size):
         """
         データを読み込む。
         :return:
         """
         start_time = datetime.now(timezone.utc) - timedelta(days=31)
+        end_time = datetime.now(timezone.utc)
+        file = OHLC_FILENAME.format(bin_size)
 
-        if os.path.exists(OHLC_FILENAME.format(self.tr, 0)):
-            self.__load_ohlcv_file(start_time)
+        if os.path.exists(file):
+            self.ohlcv_data_frame = load_data(file)
         else:
-            self.__save_ohlcv(start_time)
-            self.__load_ohlcv_file(start_time)
+            self.download_data(file, bin_size, start_time, end_time)
+            self.ohlcv_data_frame = load_data(file)
 
     def show_result(self):
         """
