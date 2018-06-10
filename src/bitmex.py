@@ -370,7 +370,7 @@ class BitMex:
         """
         pass
 
-    def plot(self, name, value, color):
+    def plot(self, name, value, color, overlay=True):
         """
         グラフに描画する。
         """

@@ -186,29 +186,48 @@ class BitMexBackTest(BitMexStub):
         logger.info(f"======================================")
 
         import matplotlib.pyplot as plt
-        plt.figure()
-        plt.subplot(211)
+
+        plt_num = len([k for k, v in self.plot_data.items() if not v['overlay']]) + 2
+        i = 1
+
+        plt.figure(figsize=(12,8))
+
+        plt.subplot(plt_num,1,i)
         plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame["high"])
         plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame["low"])
         for k, v in self.plot_data.items():
-            plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame[k])
+            if v['overlay']:
+                color = v['color']
+                plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame[k], color)
         plt.ylabel("Price(USD)")
         ymin = min(self.ohlcv_data_frame["low"]) - 200
         ymax = max(self.ohlcv_data_frame["high"]) + 200
         plt.vlines(self.buy_signals, ymin, ymax, "blue", linestyles='dashed', linewidth=1)
         plt.vlines(self.sell_signals, ymin, ymax, "red", linestyles='dashed', linewidth=1)
-        plt.subplot(212)
+
+        i = i + 1
+
+        for k, v in self.plot_data.items():
+            if not v['overlay']:
+                plt.subplot(plt_num,1,i)
+                color = v['color']
+                plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame[k], color)
+                plt.ylabel(f"{k}")
+                i = i + 1
+
+        plt.subplot(plt_num,1,i)
         plt.plot(self.ohlcv_data_frame.index, self.balance_history)
         plt.hlines(y=0, xmin=self.ohlcv_data_frame.index[0],
                    xmax=self.ohlcv_data_frame.index[-1], colors='k', linestyles='dashed')
         plt.ylabel("PL(USD)")
+
         plt.show()
 
-    def plot(self, name, value, color):
+    def plot(self, name, value, color, overlay=True):
         """
         グラフに描画する。
         """
         self.ohlcv_data_frame.at[self.index, name] = value
         if name not in self.plot_data:
-            self.plot_data[name] = {'color': color}
+            self.plot_data[name] = {'color': color, 'overlay': overlay}
 
