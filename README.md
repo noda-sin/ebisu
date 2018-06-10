@@ -28,8 +28,8 @@ BitMex用トレーディングボットプログラム。
 
 ```bash
 $ brew install talib
-$ git clone git@github.com:OopsMouse/daikokuten.git
-$ cd daikokuten/
+$ git clone git@gitlab.com:noda.sin/ebisu.git
+$ cd ebisu/
 $ python install -r requirements.txt
 ```
 
@@ -42,8 +42,8 @@ $ cd ta-lib/
 $ ./configure --prefix=/usr
 $ make
 $ sudo make install
-$ git clone git@github.com:OopsMouse/daikokuten.git
-$ cd daikokuten/
+$ git clone git@gitlab.com:noda.sin/ebisu.git
+$ cd ebisu/
 $ python install -r requirements.txt
 ```
 
@@ -69,7 +69,7 @@ optional arguments:
 $ vi ~/.bashrc
 BITMEX_APIKEY=***********
 BITMEX_SECRET=***********
-$ daikokuten --strategy Doten
+$ python main.py --strategy Doten
 ```
 
 バックテスト
@@ -78,7 +78,7 @@ $ daikokuten --strategy Doten
 $ vi ~/.bashrc
 BITMEX_TEST_APIKEY=***********
 BITMEX_TEST_SECRET=***********
-$ daikokuten --test --strategy Doten
+$ python main.py --test --strategy Doten
 ```
 
 ## 戦略の追加方法
