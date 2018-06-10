@@ -1,4 +1,5 @@
 # coding: UTF-8
+
 from src import logger
 from src.bitmex import BitMex
 

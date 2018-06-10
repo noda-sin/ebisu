@@ -1,6 +1,10 @@
+# coding: UTF-8
+
+import base64
 import logging
 import os
 import time
+import uuid
 from datetime import timedelta
 
 import numpy as np
@@ -29,6 +33,8 @@ allowed_range = {
 class FatalError(Exception):
     pass
 
+def ord_suffix():
+    return "_" + base64.b64encode(uuid.uuid4().bytes).decode('utf-8').rstrip('=\n')
 
 def load_data(file):
     """

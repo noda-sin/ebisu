@@ -1,3 +1,5 @@
+# coding: UTF-8
+
 import datetime
 import os
 import tempfile

@@ -1,10 +1,10 @@
+# coding: UTF-8
+
 import datetime
 import os
 import unittest
-import pandas as pd
 
-from src import to_data_frame, validate_continuous, load_data
-from src.bitmex_backtest import BitMexBackTest
+from src import to_data_frame, validate_continuous, load_data, ord_suffix
 
 
 class TestUtil(unittest.TestCase):
@@ -23,3 +23,8 @@ class TestUtil(unittest.TestCase):
         file = os.path.join(os.path.dirname(__file__), "./ohlc/continuous.csv")
         data = load_data(file)
         assert validate_continuous(data, '5m')[0]
+
+    def test_order_suffix(self):
+        suffix = ord_suffix()
+        print(suffix)
+        assert len(suffix) > 0

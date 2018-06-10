@@ -11,7 +11,7 @@ from bravado.exception import HTTPNotFound
 from pytz import UTC
 
 from src import logger, retry, allowed_range, to_data_frame, \
-    resample, delta, FatalError, notify
+    resample, delta, FatalError, notify, ord_suffix
 from src.bitmex_websocket import BitMexWs
 
 
@@ -166,10 +166,124 @@ class BitMex:
                     f"{order['price']}, {order['stopPx']})")
         logger.info(f"Close All Position")
 
+    def cancel(self, id):
+        """
+        注文をキャンセルする。
+        :param id: 注文番号
+        :return:
+        """
+        self.__init_client()
+        order = self.get_open_order(id)
+        if order is None:
+            return
+
+        try:
+            retry(lambda: self.private_client.Order.Order_cancel(orderID=order['orderID']).result()[0][0])
+        except HTTPNotFound:
+            return
+        logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
+                    f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
+                    f"{order['price']}, {order['stopPx']})")
+
+    def __new_order(self, ord_id, side, ord_qty, limit=0, stop=0):
+        if limit > 0 and stop > 0:
+            ord_type = "StopLimit"
+            # self.__validate_order_quantity(ord_qty, limit)
+            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
+                                                              side=side, orderQty=ord_qty, price=limit, stopPx=stop).result())
+        elif limit > 0:
+            ord_type = "Limit"
+            # self.__validate_order_quantity(ord_qty, limit)
+            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
+                                                              side=side, orderQty=ord_qty, price=limit).result())
+        elif stop > 0:
+            ord_type = "Stop"
+            # self.__validate_order_quantity(ord_qty, stop)
+            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
+                                                              side=side, orderQty=ord_qty, stopPx=stop).result())
+        else:
+            ord_type = "Market"
+            # self.__validate_order_quantity(ord_qty)
+            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
+                                                              side=side, orderQty=ord_qty).result())
+
+        if self.enable_trade_log:
+            logger.info(f"========= New Order ==============")
+            logger.info(f"ID     : {ord_id}")
+            logger.info(f"Type   : {ord_type}")
+            logger.info(f"Side   : {side}")
+            logger.info(f"Qty    : {ord_qty}")
+            logger.info(f"Limit  : {limit}")
+            logger.info(f"Stop   : {stop}")
+            logger.info(f"======================================")
+
+            notify(f"New Order\nType: {ord_type}\nSide: {side}\nQty: {ord_qty}\nLimit: {limit}\nStop: {stop}")
+
+    def __amend_order(self, ord_id, side, ord_qty, limit=0, stop=0):
+        if limit > 0 and stop > 0:
+            ord_type = "StopLimit"
+            # self.__validate_order_quantity(ord_qty, limit)
+            retry(lambda: self.private_client.Order.Order_amend(origClOrdID=ord_id,
+                                                                orderQty=ord_qty, price=limit, stopPx=stop).result())
+        elif limit > 0:
+            ord_type = "Limit"
+            # self.__validate_order_quantity(ord_qty, limit)
+            retry(lambda: self.private_client.Order.Order_amend(origClOrdID=ord_id,
+                                                                orderQty=ord_qty, price=limit).result())
+        elif stop > 0:
+            ord_type = "Stop"
+            # self.__validate_order_quantity(ord_qty, stop)
+            retry(lambda: self.private_client.Order.Order_amend(origClOrdID=ord_id,
+                                                                orderQty=ord_qty, stopPx=stop).result())
+        else:
+            ord_type = "Market"
+            # self.__validate_order_quantity(ord_qty)
+            retry(lambda: self.private_client.Order.Order_amend(origClOrdID=ord_id,
+                                                                orderQty=ord_qty).result())
+
+        if self.enable_trade_log:
+            logger.info(f"========= Amend Order ==============")
+            logger.info(f"ID     : {ord_id}")
+            logger.info(f"Type   : {ord_type}")
+            logger.info(f"Side   : {side}")
+            logger.info(f"Qty    : {ord_qty}")
+            logger.info(f"Limit  : {limit}")
+            logger.info(f"Stop   : {stop}")
+            logger.info(f"======================================")
+
+            notify(f"Amend Order\nType: {ord_type}\nSide: {side}\nQty: {ord_qty}\nLimit: {limit}\nStop: {stop}")
+
     def entry(self, id, long, qty, limit=0, stop=0, when=True):
         """
         注文をする。pineの関数と同等の機能。
         https://jp.tradingview.com/study-script-reference/#fun_strategy{dot}entry
+        :param id: 注文の番号
+        :param long: ロング or ショート
+        :param qty: 注文量
+        :param limit: 指値
+        :param stop: ストップ指値
+        :param when: 注文するか
+        :return:
+        """
+        if not when:
+            return
+
+        pos_size = self.get_position_size()
+
+        if long and pos_size > 0:
+            return
+
+        if not long and pos_size < 0:
+            return
+
+        ord_qty = qty + abs(pos_size)
+
+        self.order(id, long, ord_qty, limit, stop, when)
+
+    def order(self, id, long, qty, limit=0, stop=0, when=True):
+        """
+        注文をする。pineの関数と同等の機能。
+        https://jp.tradingview.com/study-script-reference/#fun_strategy{dot}order
         :param id: 注文の番号
         :param long: ロング or ショート
         :param qty: 注文量
@@ -183,116 +297,49 @@ class BitMex:
         if not when:
             return
 
-        pos_size = self.get_position_size()
-
-        if long and pos_size > 0:
-            return
-
-        if not long and pos_size < 0:
-            return
-
         side = "Buy" if long else "Sell"
-        ord_qty = qty + abs(pos_size)
+        ord_qty = qty
 
-        if self.exist_open_order(long, ord_qty, limit, stop):
-            return
+        order = self.get_open_order(id)
+        ord_id = id+ord_suffix() if order is None else order["clOrdID"]
 
-        self.cancel(long)
-
-        if limit > 0 and stop > 0:
-            ord_type = "StopLimit"
-            # self.__validate_order_quantity(ord_qty, limit)
-            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
-                                                              side=side, orderQty=ord_qty, price=limit, stopPx=stop).result())
-        elif limit > 0:
-            ord_type = "Limit"
-            # self.__validate_order_quantity(ord_qty, limit)
-            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
-                                                              side=side, orderQty=ord_qty, price=limit).result())
-        elif stop > 0:
-            ord_type = "Stop"
-            # self.__validate_order_quantity(ord_qty, stop)
-            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
-                                                              side=side, orderQty=ord_qty, stopPx=stop).result())
+        if order is None:
+            self.__new_order(ord_id, side, ord_qty, limit, stop)
         else:
-            ord_type = "Market"
-            # self.__validate_order_quantity(ord_qty)
-            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
-                                                              side=side, orderQty=ord_qty).result())
+            self.__amend_order(ord_id, side, ord_qty, limit, stop)
 
-        if self.enable_trade_log:
-            logger.info(f"========= Create Order ==============")
-            logger.info(f"ID     : {id}")
-            logger.info(f"Type   : {ord_type}")
-            logger.info(f"Side   : {side}")
-            logger.info(f"Qty    : {ord_qty}")
-            logger.info(f"Limit  : {limit}")
-            logger.info(f"Stop   : {stop}")
-            logger.info(f"======================================")
-
-            notify(f"Entry Order\nType: {ord_type}\nSide: {side}\nQty: {ord_qty}\nLimit: {limit}\nStop: {stop}")
-
-    def get_open_orders(self, long):
+    def get_open_order(self, id):
         """
         注文を取得する。
-        :param long: ロング or ショート
+        :param id: 注文番号
         :return:
         """
         self.__init_client()
-        side = "Buy" if long else "Sell"
-        return retry(lambda: self.private_client
-                     .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True, "side": side}))
+        open_orders = retry(lambda: self.private_client
+                     .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True}))
                      .result()[0])
+        open_orders = [o for o in open_orders if o["clOrdID"].startswith(id)]
+        if len(open_orders) > 0:
+            return open_orders[0]
+        else:
+            return None
 
-    def exist_open_order(self, long, qty, limit=0, stop=0):
-        """
-        同じ注文が存在するか確認する。
-        :param long:  ロング or ショート
-        :param qty: 注文量
-        :param limit: 指値
-        :param stop: ストップ指値
-        :return:
-        """
-        orders = self.get_open_orders(long)
-        if limit > 0 and stop > 0:
-            return len([order for order in orders
-                        if order['orderQty'] == qty and order['price'] == limit and order['stopPx'] == stop]) > 0
-        elif limit > 0:
-            return len([order for order in orders
-                        if order['orderQty'] == qty and order['price'] == limit and order['stopPx'] is None]) > 0
-        elif stop > 0:
-            return len([order for order in orders
-                        if order['orderQty'] == qty and order['price'] is None and order['stopPx'] == stop]) > 0
-        return False
-
-    def cancel(self, long):
-        """
-        注文をキャンセルする。
-        :param long: ロング or ショート
-        :return:
-        """
-        self.__init_client()
-        orders = self.get_open_orders(long)
-        if len(orders) == 0:
-            return
-
-        for order in orders:
-            try:
-                retry(lambda: self.private_client.Order.Order_cancel(orderID=order['orderID']).result()[0][0])
-            except HTTPNotFound:
-                return
-            logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
-                        f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
-                        f"{order['price']}, {order['stopPx']})")
-
-    def get_order_size(self):
-        """
-        注文の数を取得する。
-        :return:
-        """
-        self.__init_client()
-        return len(retry(lambda: self.private_client
-                         .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True})).result()[0]))
+    # def exit(self, id, from_entry=None, qty=0, profit=0, limit=0, loss=0, stop=0, trail_price=0, when=True):
+    #     self.__init_client()
+    #
+    #     if not when:
+    #         return
+    #
+    #     side = "Buy" if long else "Sell"
+    #     ord_qty = qty
+    #
+    #     order = self.get_open_order(id)
+    #     ord_id = id + ord_suffix() if order is None else order["clOrdID"]
+    #
+    #     if order is None:
+    #         self.__new_order(ord_id, side, ord_qty, limit, stop)
+    #     else:
+    #         self.__amend_order(ord_id, side, ord_qty, limit, stop)
 
     def fetch_ohlcv(self, bin_size, start_time, end_time):
         """

@@ -1,10 +1,8 @@
-import os
+# coding: UTF-8
+
 import unittest
 from datetime import datetime, timezone, timedelta
 
-import pandas as pd
-
-from src import load_data, resample
 from src.bitmex import BitMex
 
 
@@ -24,18 +22,31 @@ class TestBitMex(unittest.TestCase):
         source = bitmex.fetch_ohlcv('2h', start_time, end_time)
         assert len(source) > 1
 
-    def test_combine_data(self):
-        file = os.path.join(os.path.dirname(__file__), "ohlc/2h_ohlcv.csv")
-        data = load_data(file)
+    def test_entry_cancel(self):
+        bitmex = BitMex()
+        bitmex.demo = True
 
-        file = os.path.join(os.path.dirname(__file__), "ohlc/1h_ohlcv.csv")
-        new_data = load_data(file)
+        # 前処理
+        bitmex.close_all()
 
-        print(data)
-        print(new_data)
-        combine_data = pd.concat([data, new_data])
-        print(combine_data)
+        price = bitmex.get_market_price()
 
-        print(resample(combine_data, '2h') == data)
+        # 注文、キャンセルの試験
+        id = "Long"
+        bitmex.entry(id, True, 1, limit=price-1000)
+        assert bitmex.get_open_order(id) is not None
+        bitmex.cancel(id)
+        assert bitmex.get_open_order(id) is None
 
-        print(combine_data.last)
+        # 注文の更新
+        id = "Long"
+        bitmex.entry(id, True, 1, limit=price-1000)
+        order = bitmex.get_open_order(id)
+        assert order["orderQty"] == 1
+        assert order["price"] == price-1000
+        bitmex.entry(id, True, 2, limit=price-900)
+        order = bitmex.get_open_order(id)
+        assert order["orderQty"] == 2
+        assert order["price"] == price-900
+        bitmex.cancel(id)
+        assert bitmex.get_open_order(id) is None
