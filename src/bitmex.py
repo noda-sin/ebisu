@@ -2,6 +2,7 @@
 
 import json
 import os
+import traceback
 from datetime import datetime, timezone
 
 import bitmex
@@ -340,10 +341,12 @@ class BitMex:
         except FatalError as e:
             # 致命的エラー
             logger.error(f"Fatal error. {e}")
+            logger.error(traceback.format_exc())
             notify(f"Fatal error occurred. Stopping Bot. {e}")
             self.stop()
         except Exception as e:
             logger.error(f"An error occurred. {e}")
+            logger.error(traceback.format_exc())
             notify(f"An error occurred. {e}")
 
     def on_update(self, bin_size, listener):

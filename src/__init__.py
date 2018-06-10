@@ -16,12 +16,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 allowed_range = {
-    "1m": ["1m", "1T", 1, 1], "3m": ["1m", "3T", 3, 3],
+    "1m": ["1m", "1T", 1, 1], "3m":  ["1m", "3T", 3, 3],
     "5m": ["5m", "5T", 1, 5], "15m": ["5m", "15T", 3, 15], "30m": ["5m", "30T", 6, 30],
-    "1h": ["1h", "1H", 1, 60], "2h": ["1h", "2H", 2, 120],
-    "3h": ["1h", "3H", 3, 180], "4h": ["1h", "4H", 4, 240],
-    "6h": ["1h", "6H", 6, 360], "12h": ["1h", "12H", 12, 720],
-    "1d": ["1d", "1D", 1, 1440],
+    "1h": ["1h", "1H", 1, 1], "2h":  ["1h", "2H", 2, 2],
+    "3h": ["1h", "3H", 3, 3], "4h":  ["1h", "4H", 4, 4],
+    "6h": ["1h", "6H", 6, 6], "12h": ["1h", "12H", 12, 12],
+    "1d": ["1d", "1D", 1, 1],
     # not support yet '3d', '1w', '2w', '1m'
 }
 
@@ -162,11 +162,11 @@ def sar(high, low, acceleration=0, maximum=0):
 
 def delta(bin_size='1h'):
     if bin_size.endswith('d'):
-        return timedelta(days=allowed_range[bin_size][2])
+        return timedelta(days=allowed_range[bin_size][3])
     elif bin_size.endswith('h'):
-        return timedelta(hours=allowed_range[bin_size][2])
+        return timedelta(hours=allowed_range[bin_size][3])
     elif bin_size.endswith('m'):
-        return timedelta(minutes=allowed_range[bin_size][2])
+        return timedelta(minutes=allowed_range[bin_size][3])
 
 def notify(message: object, fileName: object = None) -> object:
     url = 'https://notify-api.line.me/api/notify'
