@@ -62,7 +62,7 @@ class SMAPlus(Bot):
         return {
             'fast_len': hp.quniform('fast_len', 1, 10, 1),
             'slow_len': hp.quniform('slow_len', 11, 20, 1),
-            'long_term': hp.quniform('slow_len', 85, 95, 1),
+            'long_term': hp.quniform('long_term', 85, 95, 1),
         }
 
     def calc_bias_level(self, price, sma):
