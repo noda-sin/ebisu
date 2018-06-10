@@ -169,7 +169,6 @@ def delta(bin_size='1h'):
         return timedelta(minutes=allowed_range[bin_size][2])
 
 def notify(message: object, fileName: object = None) -> object:
-    logger.info(message)
     url = 'https://notify-api.line.me/api/notify'
     api_key = os.environ.get('LINE_APIKEY')
     if api_key is None or len(api_key) == 0:

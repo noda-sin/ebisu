@@ -343,7 +343,7 @@ class BitMex:
             notify(f"Fatal error occurred. Stopping Bot. {e}")
             self.stop()
         except Exception as e:
-            logger.error(e)
+            logger.error(f"An error occurred. {e}")
             notify(f"An error occurred. {e}")
 
     def on_update(self, bin_size, listener):
