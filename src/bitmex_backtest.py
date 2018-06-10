@@ -16,7 +16,7 @@ class BitMexBackTest(BitMexStub):
     # 取引価格
     market_price = 0
     # 時間足データ
-    ohlcv_data_frame = None
+    df_ohlcv = None
     # 現在の時間軸
     index = None
     # 現在の時間
@@ -95,8 +95,8 @@ class BitMexBackTest(BitMexStub):
         for i in range(self.ohlcv_len):
             self.balance_history.append((self.get_balance() - self.start_balance)/100000000*self.get_market_price())
 
-        for i in range(len(self.ohlcv_data_frame)-self.ohlcv_len):
-            slice = self.ohlcv_data_frame.iloc[i:i+self.ohlcv_len,:]
+        for i in range(len(self.df_ohlcv) - self.ohlcv_len):
+            slice = self.df_ohlcv.iloc[i:i + self.ohlcv_len, :]
             timestamp = slice.iloc[-1].name
             close = slice['close'].values
             open = slice['open'].values
@@ -167,10 +167,10 @@ class BitMexBackTest(BitMexStub):
         file = OHLC_FILENAME.format(bin_size)
 
         if os.path.exists(file):
-            self.ohlcv_data_frame = load_data(file)
+            self.df_ohlcv = load_data(file)
         else:
             self.download_data(file, bin_size, start_time, end_time)
-            self.ohlcv_data_frame = load_data(file)
+            self.df_ohlcv = load_data(file)
 
     def show_result(self):
         """
@@ -193,15 +193,15 @@ class BitMexBackTest(BitMexStub):
         plt.figure(figsize=(12,8))
 
         plt.subplot(plt_num,1,i)
-        plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame["high"])
-        plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame["low"])
+        plt.plot(self.df_ohlcv.index, self.df_ohlcv["high"])
+        plt.plot(self.df_ohlcv.index, self.df_ohlcv["low"])
         for k, v in self.plot_data.items():
             if v['overlay']:
                 color = v['color']
-                plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame[k], color)
+                plt.plot(self.df_ohlcv.index, self.df_ohlcv[k], color)
         plt.ylabel("Price(USD)")
-        ymin = min(self.ohlcv_data_frame["low"]) - 200
-        ymax = max(self.ohlcv_data_frame["high"]) + 200
+        ymin = min(self.df_ohlcv["low"]) - 200
+        ymax = max(self.df_ohlcv["high"]) + 200
         plt.vlines(self.buy_signals, ymin, ymax, "blue", linestyles='dashed', linewidth=1)
         plt.vlines(self.sell_signals, ymin, ymax, "red", linestyles='dashed', linewidth=1)
 
@@ -211,14 +211,14 @@ class BitMexBackTest(BitMexStub):
             if not v['overlay']:
                 plt.subplot(plt_num,1,i)
                 color = v['color']
-                plt.plot(self.ohlcv_data_frame.index, self.ohlcv_data_frame[k], color)
+                plt.plot(self.df_ohlcv.index, self.df_ohlcv[k], color)
                 plt.ylabel(f"{k}")
                 i = i + 1
 
         plt.subplot(plt_num,1,i)
-        plt.plot(self.ohlcv_data_frame.index, self.balance_history)
-        plt.hlines(y=0, xmin=self.ohlcv_data_frame.index[0],
-                   xmax=self.ohlcv_data_frame.index[-1], colors='k', linestyles='dashed')
+        plt.plot(self.df_ohlcv.index, self.balance_history)
+        plt.hlines(y=0, xmin=self.df_ohlcv.index[0],
+                   xmax=self.df_ohlcv.index[-1], colors='k', linestyles='dashed')
         plt.ylabel("PL(USD)")
 
         plt.show()
@@ -227,7 +227,7 @@ class BitMexBackTest(BitMexStub):
         """
         グラフに描画する。
         """
-        self.ohlcv_data_frame.at[self.index, name] = value
+        self.df_ohlcv.at[self.index, name] = value
         if name not in self.plot_data:
             self.plot_data[name] = {'color': color, 'overlay': overlay}
 
