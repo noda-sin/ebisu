@@ -16,12 +16,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # ボットを作成する
-    bot = BotFactory.create(args.strategy, {
-        'demo': args.demo,
-        'stub': args.stub,
-        'test': args.test,
-        'hyperopt': args.hyperopt,
-    })
+    bot = BotFactory.create(args)
     # ボットを稼働する
     bot.run()
 

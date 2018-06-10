@@ -3,7 +3,7 @@ import random
 
 from hyperopt import hp
 
-from src import highest, lowest, sma, crossover, crossunder, last, stdev, rci
+from src import highest, lowest, sma, crossover, crossunder, last, stdev, rci, rsi, sar, is_under, is_over
 from src.bot import Bot
 
 
@@ -191,6 +191,58 @@ class VixRci(Bot):
             self.exchange.entry("Short", False, lot)
         elif exit_long or exit_short:
             self.exchange.close_all()
+
+# パラボリックSAR-RSI戦略
+class SarRsi(Bot):
+
+    sar_trend = None
+
+    def __init__(self):
+        Bot.__init__(self, '1h')
+
+    def options(self):
+        return {
+            'pd': hp.quniform('pd', 23, 30, 1),
+            'bbl': hp.quniform('bbl', 20, 30, 1),
+            'mult': hp.uniform('mult', 1, 2.5),
+            'lb': hp.quniform('lb', 80, 100, 1),
+            'ph': hp.uniform('ph', 0, 1),
+            'pl': hp.uniform('pl', 1, 2),
+            'rci_limit': hp.quniform('rci_limit', 70, 90, 1),
+            'rci_diff': hp.quniform('rci_diff', 10, 40, 1),
+            'itvs': hp.quniform('itvs', 1, 30, 1),
+            'itvm': hp.quniform('itvm', 20, 50, 1),
+            'itvl': hp.quniform('itvl', 40, 70, 1),
+        }
+
+    def strategy(self, open, close, high, low):
+        lot = self.exchange.get_lot()
+
+        acceleration = self.input('acceleration', float, 0.02)
+        maximum = self.input('maximum', float, 0.2)
+        rsi_len = self.input('rsi_len', int, 14)
+        rsi_under = self.input('rsi_under', int, 30)
+        rsi_over = self.input('rsi_under', int, 75)
+        rsi_stick_len = self.input('rsi_stick_len', int, 3)
+
+        sar_val = sar(high, low, acceleration, maximum)
+        rsi_val = rsi(close, rsi_len)
+
+        if crossunder(sar_val, close):
+            self.sar_trend = 'Long'
+        elif crossover(sar_val, close):
+            self.sar_trend = 'Short'
+
+        self.exchange.plot('rsi', rsi_val[-1], 'r', overlay=False)
+
+        if self.sar_trend == 'Long' and \
+            is_under(rsi_val[:-2], rsi_under, rsi_stick_len) and \
+            rsi_val[-1] > rsi_under:
+            self.exchange.entry("Long", True, lot)
+        elif self.sar_trend == 'Short' and \
+            is_over(rsi_val[:-2], rsi_over, rsi_stick_len) and \
+            rsi_val[-1] < rsi_over:
+            self.exchange.entry("Short", False, lot)
 
 # サンプル戦略
 class Sample(Bot):

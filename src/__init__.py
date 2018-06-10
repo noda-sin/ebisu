@@ -157,22 +157,16 @@ def di_minus(high, low, close, period=14):
 def rsi(close, period=14):
     return talib.RSI(close, period)
 
+def sar(high, low, acceleration=0, maximum=0):
+    return talib.SAR(high, low, acceleration, maximum)
 
 def delta(bin_size='1h'):
     if bin_size.endswith('d'):
-        return timedelta(days=allowed_range[bin_size][3])
+        return timedelta(days=allowed_range[bin_size][2])
     elif bin_size.endswith('h'):
-        return timedelta(hours=allowed_range[bin_size][3])
+        return timedelta(hours=allowed_range[bin_size][2])
     elif bin_size.endswith('m'):
-        return timedelta(minutes=allowed_range[bin_size][3])
-
-
-def change_rate(a, b):
-    if a > b:
-        return a / b
-    else:
-        return b / a
-
+        return timedelta(minutes=allowed_range[bin_size][2])
 
 def notify(message: object, fileName: object = None) -> object:
     logger.info(message)
@@ -238,36 +232,3 @@ def is_over(src, value, p):
         if src[-i - 1] < value:
             return False
     return True
-
-
-def is_top(src):
-    return (src[-5] < src[-3] and src[-4] < src[-3] and src[-3] > src[-2] and src[-3] > src[-1])
-
-
-def is_bottom(src):
-    return (src[-5] > src[-3] and src[-4] > src[-3] and src[-3] < src[-2] and src[-3] < src[-1])
-
-
-def maybe_top(src):
-    return (src[-5] < src[-3] and src[-4] < src[-3]) or (src[-3] > src[-2] and src[-3] > src[-1])
-
-
-def maybe_bottom(src):
-    return (src[-5] > src[-3] and src[-4] > src[-3]) or (src[-3] < src[-2] and src[-3] < src[-1])
-
-
-valuewhen_data = {}
-
-
-def valuewhen(label, ok, value):
-    global valuewhen_data
-
-    if label in valuewhen_data:
-        prev = valuewhen_data[label][-1]
-        if ok:
-            valuewhen_data[label].append(value)
-        return prev
-    else:
-        if ok:
-            valuewhen_data[label] = [value]
-        return np.nan
