@@ -344,12 +344,16 @@ class BitMex:
             # 致命的エラー
             logger.error(f"Fatal error. {e}")
             logger.error(traceback.format_exc())
+
             notify(f"Fatal error occurred. Stopping Bot. {e}")
+            notify(traceback.format_exc())
             self.stop()
         except Exception as e:
             logger.error(f"An error occurred. {e}")
             logger.error(traceback.format_exc())
+
             notify(f"An error occurred. {e}")
+            notify(traceback.format_exc())
 
     def on_update(self, bin_size, listener):
         """
