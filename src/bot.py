@@ -79,8 +79,8 @@ class Bot:
             logger.info(f"Params : {args}")
             try:
                 self.params = args
-                self.exchange = BitMexBackTest(self.tr)
-                self.exchange.on_update(self.strategy)
+                self.exchange = BitMexBackTest()
+                self.exchange.on_update(self.bin_size, self.strategy)
                 profit_factor = self.exchange.win_profit/self.exchange.lose_loss
                 logger.info(f"Profit Factor : {profit_factor}")
                 ret = {
