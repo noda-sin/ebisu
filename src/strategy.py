@@ -53,6 +53,80 @@ class SMA(Bot):
             self.exchange.entry("Short", False, lot)
 
 
+# SMAクロス 押し目買い戻り売り 戦略
+class SMAPlus(Bot):
+    def __init__(self):
+        Bot.__init__(self, '2h')
+
+    def options(self):
+        return {
+            'fast_len': hp.quniform('fast_len', 1, 10, 1),
+            'slow_len': hp.quniform('slow_len', 11, 20, 1),
+            'long_term': hp.quniform('slow_len', 85, 95, 1),
+        }
+
+    def calc_bias_level(self, price, sma):
+        bias = sma[-2] - sma[-1]
+        bias_abs = abs(bias)
+        plus_minus = -1 if bias < 0 else 1
+
+        # 傾きのレベリング（根拠なくフィボナッチ）
+        # レンジ判断 3以下
+        # 13	21	34	55
+        l0 = price * 3 / 10000.0
+        l1 = price * 13 / 10000.0
+        l2 = price * 21 / 10000.0
+        l3 = price * 34 / 10000.0
+        l4 = price * 55 / 10000.0
+
+        if bias_abs < l0:
+            return plus_minus * 0
+        elif bias_abs < l1:
+            return plus_minus * 1
+        elif bias_abs < l2:
+            return plus_minus * 2
+        elif bias_abs < l3:
+            return plus_minus * 3
+        elif bias_abs < l4:
+            return plus_minus * 4
+        else:
+            return plus_minus * 5
+
+    def strategy(self, open, close, high, low):
+        lot = self.exchange.get_lot()
+        fast_len = self.input('fast_len', int, 9)
+        slow_len = self.input('slow_len', int, 16)
+        long_term = self.input('long_term', int, 89)
+
+        fast_sma = sma(close, fast_len)
+        slow_sma = sma(close, slow_len)
+        long_term_sma = sma(close, long_term)
+
+        golden_cross = crossover(fast_sma, slow_sma)
+        dead_cross = crossunder(fast_sma, slow_sma)
+
+        price = self.exchange.get_market_price()
+        bias_level = self.calc_bias_level(price, long_term_sma)
+
+        self.exchange.plot('long_term', long_term_sma[-1], 'r')
+        self.exchange.plot('bias_level', bias_level, 'b', overlay=False)
+
+        if bias_level == 0:
+            return
+
+        if bias_level < 0 and close[-1] > long_term_sma[-1]:
+            self.exchange.entry("Short", False, lot)
+        elif bias_level > 0 and close[-1] < long_term_sma[-1]:
+            self.exchange.entry("Long", True, lot)
+        elif golden_cross and bias_level < 0:
+            self.exchange.entry("Short", False, lot)
+        elif golden_cross and bias_level > 0:
+            self.exchange.entry("Long", True, lot)
+        elif dead_cross and bias_level < 0:
+            self.exchange.entry("Short", False, lot)
+        elif dead_cross and bias_level > 0:
+            self.exchange.entry("Long", True, lot)
+
 # Rci戦略
 class Rci(Bot):
     def __init__(self):
@@ -202,17 +276,12 @@ class SarRsi(Bot):
 
     def options(self):
         return {
-            'pd': hp.quniform('pd', 23, 30, 1),
-            'bbl': hp.quniform('bbl', 20, 30, 1),
-            'mult': hp.uniform('mult', 1, 2.5),
-            'lb': hp.quniform('lb', 80, 100, 1),
-            'ph': hp.uniform('ph', 0, 1),
-            'pl': hp.uniform('pl', 1, 2),
-            'rci_limit': hp.quniform('rci_limit', 70, 90, 1),
-            'rci_diff': hp.quniform('rci_diff', 10, 40, 1),
-            'itvs': hp.quniform('itvs', 1, 30, 1),
-            'itvm': hp.quniform('itvm', 20, 50, 1),
-            'itvl': hp.quniform('itvl', 40, 70, 1),
+            'acceleration': hp.uniform('acceleration', 0, 0.1),
+            'maximum': hp.uniform('maximum', 0.1, 1),
+            'rsi_len': hp.quniform('rsi_len', 10, 15, 1),
+            'rsi_under': hp.quniform('rsi_under', 70, 100, 1),
+            'rsi_over': hp.quniform('rsi_over', 0, 30, 1),
+            'rsi_stick_len': hp.quniform('rsi_stick_len', 1, 5, 1)
         }
 
     def strategy(self, open, close, high, low):
@@ -222,7 +291,7 @@ class SarRsi(Bot):
         maximum = self.input('maximum', float, 0.2)
         rsi_len = self.input('rsi_len', int, 14)
         rsi_under = self.input('rsi_under', int, 30)
-        rsi_over = self.input('rsi_under', int, 75)
+        rsi_over = self.input('rsi_over', int, 75)
         rsi_stick_len = self.input('rsi_stick_len', int, 3)
 
         sar_val = sar(high, low, acceleration, maximum)
