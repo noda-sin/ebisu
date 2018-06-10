@@ -201,22 +201,22 @@ class BitMex:
 
         if limit > 0 and stop > 0:
             ord_type = "StopLimit"
-            self.__validate_order_quantity(ord_qty, limit)
+            # self.__validate_order_quantity(ord_qty, limit)
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
                                                               side=side, orderQty=ord_qty, price=limit, stopPx=stop).result())
         elif limit > 0:
             ord_type = "Limit"
-            self.__validate_order_quantity(ord_qty, limit)
+            # self.__validate_order_quantity(ord_qty, limit)
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
                                                               side=side, orderQty=ord_qty, price=limit).result())
         elif stop > 0:
             ord_type = "Stop"
-            self.__validate_order_quantity(ord_qty, stop)
+            # self.__validate_order_quantity(ord_qty, stop)
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
                                                               side=side, orderQty=ord_qty, stopPx=stop).result())
         else:
             ord_type = "Market"
-            self.__validate_order_quantity(ord_qty)
+            # self.__validate_order_quantity(ord_qty)
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type,
                                                               side=side, orderQty=ord_qty).result())
 
@@ -229,6 +229,8 @@ class BitMex:
             logger.info(f"Limit  : {limit}")
             logger.info(f"Stop   : {stop}")
             logger.info(f"======================================")
+
+            notify(f"Entry Order\nType: {ord_type}\nSide: {side}\nQty: {ord_qty}\nLimit: {limit}\nStop: {stop}")
 
     def get_open_orders(self, long):
         """
