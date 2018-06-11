@@ -42,6 +42,8 @@ class BitMex:
     ohlcv_len = 100
     # OHLCのキャッシュ
     data = None
+    # 利確損切戦略
+    exit_order = {'profit': 0, 'loss': 0, 'trail_offset': 0}
 
     def __init__(self, demo=False, threading=True):
         """
@@ -328,22 +330,35 @@ class BitMex:
         else:
             return None
 
-    # def exit(self, id, from_entry=None, qty=0, profit=0, limit=0, loss=0, stop=0, trail_price=0, when=True):
-    #     self.__init_client()
-    #
-    #     if not when:
-    #         return
-    #
-    #     side = "Buy" if long else "Sell"
-    #     ord_qty = qty
-    #
-    #     order = self.get_open_order(id)
-    #     ord_id = id + ord_suffix() if order is None else order["clOrdID"]
-    #
-    #     if order is None:
-    #         self.__new_order(ord_id, side, ord_qty, limit, stop)
-    #     else:
-    #         self.__amend_order(ord_id, side, ord_qty, limit, stop)
+    def exit(self, profit=0, loss=0, trail_offset=0):
+        """
+        利確、損切戦略の登録 lossとtrail_offsetが両方設定されたら、trail_offsetが優先される
+        :param profit: 利益(ティックで指定する)
+        :param loss: 損切(ティックで指定する)
+        :param trail_offset: トレーリングストップの価格(ティックで指定)
+        """
+        self.exit_order = {'profit': profit, 'loss': loss, 'trail_offset': trail_offset}
+
+    def __eval_exit(self):
+        """
+        利確、損切戦略の評価
+        """
+        if self.get_position_size() == 0:
+            return
+
+        if 'unrealisedPnl' not in self.position:
+            return
+
+        unrealised_pnl = self.position['unrealisedPnl']
+
+        if unrealised_pnl > 0 and \
+                0 < self.exit_order['profit'] < abs(unrealised_pnl / 100000000):
+            self.close_all()
+        elif unrealised_pnl < 0 and \
+                0 < self.exit_order['loss'] < abs(unrealised_pnl / 100000000):
+            self.close_all()
+
+        # TODO: trailing stop
 
     def fetch_ohlcv(self, bin_size, start_time, end_time):
         """
@@ -418,6 +433,8 @@ class BitMex:
          ポジションを更新する
         """
         self.position = position
+        # 利確損切の評価
+        self.__eval_exit()
 
     def __on_update_margin(self, margin):
         """
