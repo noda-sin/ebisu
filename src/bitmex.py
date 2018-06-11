@@ -19,6 +19,10 @@ from src.bitmex_websocket import BitMexWs
 class BitMex:
     # 価格
     market_price = 0
+    # ポジション
+    position = {}
+    # マージン
+    margin = {}
     # 利用する時間足
     bin_size = '1h'
     # プライベートAPI用クライアント
@@ -59,6 +63,9 @@ class BitMex:
         self.public_client = bitmex.bitmex(test=self.demo)
 
     def now_time(self):
+        """
+        現在の時間
+        """
         return datetime.now().astimezone(UTC)
 
     def __validate_order_quantity(self, order_qty, price=0):
@@ -118,17 +125,20 @@ class BitMex:
         現在のポジションサイズを取得する。
         :return:
         """
-        self.__init_client()
-        return retry(lambda: self.private_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["currentQty"])
+        if 'currentQty' in self.position:
+            return self.position['currentQty']
+        else:
+            return 0
 
     def get_position_avg_price(self):
         """
         現在のポジションの平均価格を取得する。
         :return:
         """
-        self.__init_client()
-        return retry(lambda: self.private_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0][
-            "avgEntryPrice"])
+        if 'avgEntryPrice' in self.position:
+            return self.position['avgEntryPrice']
+        else:
+            return 0
 
     def get_market_price(self):
         """
@@ -187,6 +197,9 @@ class BitMex:
                     f"{order['price']}, {order['stopPx']})")
 
     def __new_order(self, ord_id, side, ord_qty, limit=0, stop=0):
+        """
+        注文を作成する
+        """
         if limit > 0 and stop > 0:
             ord_type = "StopLimit"
             # self.__validate_order_quantity(ord_qty, limit)
@@ -221,6 +234,9 @@ class BitMex:
             notify(f"New Order\nType: {ord_type}\nSide: {side}\nQty: {ord_qty}\nLimit: {limit}\nStop: {stop}")
 
     def __amend_order(self, ord_id, side, ord_qty, limit=0, stop=0):
+        """
+        注文を更新する
+        """
         if limit > 0 and stop > 0:
             ord_type = "StopLimit"
             # self.__validate_order_quantity(ord_qty, limit)
@@ -266,6 +282,13 @@ class BitMex:
         :param when: 注文するか
         :return:
         """
+        self.__init_client()
+
+        if 'excessMargin' not in self.margin or \
+                self.margin['excessMargin'] <= 0 or \
+                qty <= 0:
+            return
+
         if not when:
             return
 
@@ -294,6 +317,11 @@ class BitMex:
         :return:
         """
         self.__init_client()
+
+        if 'excessMargin' not in self.margin or \
+                self.margin['excessMargin'] <= 0  or \
+                qty <= 0:
+            return
 
         if not when:
             return
@@ -406,9 +434,21 @@ class BitMex:
     def __on_update_instrument(self, instrument):
         """
          取引価格を更新する
-         """
+        """
         if 'lastPrice' in instrument:
             self.market_price = instrument['lastPrice']
+
+    def __on_update_position(self, position):
+        """
+         ポジションを更新する
+        """
+        self.position = position
+
+    def __on_update_margin(self, margin):
+        """
+         マージンを更新する
+        """
+        self.margin = margin
 
     def on_update(self, bin_size, listener):
         """
@@ -421,6 +461,8 @@ class BitMex:
             self.ws = BitMexWs(test=self.demo)
             self.ws.bind(allowed_range[bin_size][0], self.__update_ohlcv)
             self.ws.bind('instrument', self.__on_update_instrument)
+            self.ws.bind('position', self.__on_update_position)
+            self.ws.bind('margin', self.__on_update_margin)
 
     def stop(self):
         """

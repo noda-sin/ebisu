@@ -101,13 +101,13 @@ class BitMexWs:
         :return:
         """
         try:
-            object = json.loads(message)
-            if 'table' in object:
-                if len(object['data']) <= 0:
+            obj = json.loads(message)
+            if 'table' in obj:
+                if len(obj['data']) <= 0:
                     return
 
-                table = object['table']
-                data = object['data'][0]
+                table = obj['table']
+                data = obj['data'][0]
 
                 if table.startswith("tradeBin"):
                     data['timestamp'] = datetime.strptime(data['timestamp'][:-5], '%Y-%m-%dT%H:%M:%S')
