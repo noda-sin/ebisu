@@ -1,15 +1,38 @@
 # coding: UTF-8
-
+import hashlib
+import hmac
 import json
+import os
 import threading
+import time
+import urllib
 
 import websocket
 from datetime import datetime
 
 from src import logger, to_data_frame
 
+def generate_nonce():
+    return int(round(time.time() * 1000))
+
+def generate_signature(secret, verb, url, nonce, data):
+    """Generate a request signature compatible with BitMEX."""
+    # Parse the url so we can remove the base and extract just the path.
+    parsedURL = urllib.parse.urlparse(url)
+    path = parsedURL.path
+    if parsedURL.query:
+        path = path + '?' + parsedURL.query
+
+    # print "Computing HMAC: %s" % verb + path + str(nonce) + data
+    message = (verb + path + str(nonce) + data).encode('utf-8')
+
+    signature = hmac.new(secret.encode('utf-8'), message, digestmod=hashlib.sha256).hexdigest()
+    return signature
+
 
 class BitMexWs:
+    # テストネット
+    testnet = False
     # 稼働状態
     is_running = True
     # 通知先リスナー
@@ -19,6 +42,7 @@ class BitMexWs:
         """
         コンストラクタ
         """
+        self.testnet = test
         if test:
             domain = 'testnet.bitmex.com'
         else:
@@ -28,11 +52,30 @@ class BitMexWs:
         self.ws = websocket.WebSocketApp(endpoint,
                              on_message=self.__on_message,
                              on_error=self.__on_error,
-                             on_close=self.__on_close)
+                             on_close=self.__on_close,
+                             header=self.__get_auth())
         self.wst = threading.Thread(target=self.__start)
         self.wst.daemon = True
         self.wst.start()
-        
+
+    def __get_auth(self):
+        """
+        認証情報を設定する
+        """
+        api_key = os.environ.get("BITMEX_TEST_APIKEY") if self.testnet else os.environ.get("BITMEX_APIKEY")
+        api_secret = os.environ.get("BITMEX_TEST_SECRET") if self.testnet else os.environ.get("BITMEX_SECRET")
+
+        if len(api_key) > 0 and len(api_secret):
+            nonce = generate_nonce()
+            return [
+                "api-nonce: " + str(nonce),
+                "api-signature: " + generate_signature(api_secret, 'GET', '/realtime', nonce, ''),
+                "api-key:" + api_key
+            ]
+        else:
+            logger.info("WebSocket is not authenticating.")
+            return []
+
     def __start(self):
         """
         WebSocketを開始する
@@ -70,9 +113,7 @@ class BitMexWs:
                     self.__emit(table, to_data_frame([data]))
 
                 elif table.startswith("instrument"):
-                    if 'lastPrice' in data:
-                        data = data['lastPrice']
-                        self.__emit(table, data)
+                    self.__emit(table, data)
 
         except Exception as e:
             logger.error(e)
@@ -113,7 +154,7 @@ class BitMexWs:
             self.handlers['tradeBin1h'] = func
         if key == '1d':
             self.handlers['tradeBin1d'] = func
-        if key == 'price':
+        if key == 'instrument':
             self.handlers['instrument'] = func
     
     def close(self):

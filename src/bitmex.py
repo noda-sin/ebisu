@@ -403,11 +403,12 @@ class BitMex:
             notify(f"An error occurred. {e}")
             notify(traceback.format_exc())
 
-    def __on_update_price(self, price):
+    def __on_update_instrument(self, instrument):
         """
          取引価格を更新する
          """
-        self.market_price = price
+        if 'lastPrice' in instrument:
+            self.market_price = instrument['lastPrice']
 
     def on_update(self, bin_size, listener):
         """
@@ -419,7 +420,7 @@ class BitMex:
         if self.is_running:
             self.ws = BitMexWs(test=self.demo)
             self.ws.on_update(allowed_range[bin_size][0], self.__update_ohlcv)
-            self.ws.on_update('price', self.__on_update_price)
+            self.ws.on_update('instrument', self.__on_update_instrument)
 
     def stop(self):
         """
