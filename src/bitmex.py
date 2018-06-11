@@ -1,6 +1,7 @@
 # coding: UTF-8
 
 import json
+import math
 import os
 import traceback
 from datetime import datetime, timezone
@@ -68,28 +69,6 @@ class BitMex:
         """
         return datetime.now().astimezone(UTC)
 
-    def __validate_order_quantity(self, order_qty, price=0):
-        self.__init_client()
-        margin = retry(lambda: self.private_client.User.User_getMargin(currency="XBt").result()[0])
-        position = retry(lambda: self.private_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"}))
-                         .result()[0][0])
-        instrument = retry(lambda: self.public_client.Instrument.Instrument_get(symbol="XBTUSD").result()[0][0])
-        multiplier = instrument["multiplier"]
-        init_margin_req = position["initMarginReq"]
-        if price == 0:
-            price = self.get_market_price()
-        excess_margin = margin["excessMargin"]
-        if multiplier > 0:
-            if abs(order_qty * multiplier * price) * init_margin_req < excess_margin:
-                return
-            else:
-                raise FatalError()
-        else:
-            if abs(order_qty * multiplier / price) * init_margin_req < excess_margin:
-                return
-            else:
-                raise FatalError()
-
     def get_retain_rate(self):
         """
         証拠金維持率。
@@ -102,7 +81,11 @@ class BitMex:
         ロットの計算を行う。
         :return:
         """
-        return int((1 - self.get_retain_rate()) * self.get_balance() / 100000000 * self.get_leverage() * self.get_market_price())
+        if 'excessMargin' not in self.margin or \
+            'initMarginReq' not in self.position:
+            return 0
+        return math.floor((1-self.get_retain_rate()) * self.get_market_price()
+                     * self.margin['excessMargin'] / (self.position['initMarginReq'] * 100000000))
 
     def get_balance(self):
         """
@@ -202,22 +185,18 @@ class BitMex:
         """
         if limit > 0 and stop > 0:
             ord_type = "StopLimit"
-            # self.__validate_order_quantity(ord_qty, limit)
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
                                                               side=side, orderQty=ord_qty, price=limit, stopPx=stop).result())
         elif limit > 0:
             ord_type = "Limit"
-            # self.__validate_order_quantity(ord_qty, limit)
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
                                                               side=side, orderQty=ord_qty, price=limit).result())
         elif stop > 0:
             ord_type = "Stop"
-            # self.__validate_order_quantity(ord_qty, stop)
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
                                                               side=side, orderQty=ord_qty, stopPx=stop).result())
         else:
             ord_type = "Market"
-            # self.__validate_order_quantity(ord_qty)
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
                                                               side=side, orderQty=ord_qty).result())
 
@@ -239,22 +218,18 @@ class BitMex:
         """
         if limit > 0 and stop > 0:
             ord_type = "StopLimit"
-            # self.__validate_order_quantity(ord_qty, limit)
             retry(lambda: self.private_client.Order.Order_amend(origClOrdID=ord_id,
                                                                 orderQty=ord_qty, price=limit, stopPx=stop).result())
         elif limit > 0:
             ord_type = "Limit"
-            # self.__validate_order_quantity(ord_qty, limit)
             retry(lambda: self.private_client.Order.Order_amend(origClOrdID=ord_id,
                                                                 orderQty=ord_qty, price=limit).result())
         elif stop > 0:
             ord_type = "Stop"
-            # self.__validate_order_quantity(ord_qty, stop)
             retry(lambda: self.private_client.Order.Order_amend(origClOrdID=ord_id,
                                                                 orderQty=ord_qty, stopPx=stop).result())
         else:
             ord_type = "Market"
-            # self.__validate_order_quantity(ord_qty)
             retry(lambda: self.private_client.Order.Order_amend(origClOrdID=ord_id,
                                                                 orderQty=ord_qty).result())
 
