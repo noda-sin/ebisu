@@ -417,7 +417,7 @@ class BitMex:
         self.bin_size = bin_size
         self.listener = listener
         if self.is_running:
-            self.ws = BitMexWs()
+            self.ws = BitMexWs(test=self.demo)
             self.ws.on_update(allowed_range[bin_size][0], self.__update_ohlcv)
             self.ws.on_update('price', self.__on_update_price)
 

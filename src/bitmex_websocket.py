@@ -15,11 +15,15 @@ class BitMexWs:
     # 通知先リスナー
     handlers = {}
     
-    def __init__(self):
+    def __init__(self, test=False):
         """
         コンストラクタ
         """
-        endpoint = 'wss://www.bitmex.com/realtime?subscribe=tradeBin1m:XBTUSD,' \
+        if test:
+            domain = 'testnet.bitmex.com'
+        else:
+            domain = 'www.bitmex.com'
+        endpoint = 'wss://' + domain + '/realtime?subscribe=tradeBin1m:XBTUSD,' \
                         'tradeBin5m:XBTUSD,tradeBin1h:XBTUSD,tradeBin1d:XBTUSD,instrument:XBTUSD'
         self.ws = websocket.WebSocketApp(endpoint,
                              on_message=self.__on_message,
