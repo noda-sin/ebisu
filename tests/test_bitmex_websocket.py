@@ -73,3 +73,15 @@ class TestBitMexWs(unittest.TestCase):
 
         self.wait_complete()
         ws.close()
+
+    def test_subscribe_price(self):
+        ws = BitMexWs()
+
+        def subscribe(x):
+            print(x)
+            self.complete()
+
+        ws.on_update('price', subscribe)
+
+        self.wait_complete()
+        ws.close()

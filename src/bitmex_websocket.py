@@ -20,7 +20,7 @@ class BitMexWs:
         コンストラクタ
         """
         endpoint = 'wss://www.bitmex.com/realtime?subscribe=tradeBin1m:XBTUSD,' \
-                        'tradeBin5m:XBTUSD,tradeBin1h:XBTUSD,tradeBin1d:XBTUSD'
+                        'tradeBin5m:XBTUSD,tradeBin1h:XBTUSD,tradeBin1d:XBTUSD,instrument:XBTUSD'
         self.ws = websocket.WebSocketApp(endpoint,
                              on_message=self.__on_message,
                              on_error=self.__on_error,
@@ -53,19 +53,32 @@ class BitMexWs:
         :return:
         """
         try:
-            data = json.loads(message)
-            if 'table' in data:
-                if len(data['data']) <= 0:
+            object = json.loads(message)
+            if 'table' in object:
+                if len(object['data']) <= 0:
                     return
 
-                table = data['table']
-                ohlc  = data['data'][0]
-                ohlc['timestamp'] = datetime.strptime(ohlc['timestamp'][:-5], '%Y-%m-%dT%H:%M:%S')
+                table = object['table']
+                data = object['data'][0]
 
-                if table in self.handlers:
-                    self.handlers[table](to_data_frame([ohlc]))
+                if table.startswith("tradeBin"):
+                    data['timestamp'] = datetime.strptime(data['timestamp'][:-5], '%Y-%m-%dT%H:%M:%S')
+                    self.__emit(table, to_data_frame([data]))
+
+                elif table.startswith("instrument"):
+                    if 'lastPrice' in data:
+                        data = data['lastPrice']
+                        self.__emit(table, data)
+
         except Exception as e:
             logger.error(e)
+
+    def __emit(self, key, value):
+        """
+        データを送る
+        """
+        if key in self.handlers:
+            self.handlers[key](value)
 
     def __on_close(self, ws):
         """
@@ -96,6 +109,8 @@ class BitMexWs:
             self.handlers['tradeBin1h'] = func
         if key == '1d':
             self.handlers['tradeBin1d'] = func
+        if key == 'price':
+            self.handlers['instrument'] = func
     
     def close(self):
         """

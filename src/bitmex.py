@@ -17,6 +17,8 @@ from src.bitmex_websocket import BitMexWs
 
 # 本番取引用クラス
 class BitMex:
+    # 価格
+    market_price = 0
     # 利用する時間足
     bin_size = '1h'
     # プライベートAPI用クライアント
@@ -68,7 +70,7 @@ class BitMex:
         multiplier = instrument["multiplier"]
         init_margin_req = position["initMarginReq"]
         if price == 0:
-            price = instrument["lastPrice"]
+            price = self.get_market_price()
         excess_margin = margin["excessMargin"]
         if multiplier > 0:
             if abs(order_qty * multiplier * price) * init_margin_req < excess_margin:
@@ -133,8 +135,7 @@ class BitMex:
         現在の取引額を取得する。
         :return:
         """
-        self.__init_client()
-        return retry(lambda: self.public_client.Instrument.Instrument_get(symbol="XBTUSD").result()[0][0]["lastPrice"])
+        return self.market_price
 
     def get_commission(self):
         """
@@ -356,7 +357,7 @@ class BitMex:
         data_frame = to_data_frame(data)
         return resample(data_frame, bin_size)
 
-    def __update(self, new_data):
+    def __update_ohlcv(self, new_data):
         """
         データを取得して、戦略を実行する。
         """
@@ -402,6 +403,12 @@ class BitMex:
             notify(f"An error occurred. {e}")
             notify(traceback.format_exc())
 
+    def __on_update_price(self, price):
+        """
+         取引価格を更新する
+         """
+        self.market_price = price
+
     def on_update(self, bin_size, listener):
         """
         戦略の関数を登録する。
@@ -411,7 +418,8 @@ class BitMex:
         self.listener = listener
         if self.is_running:
             self.ws = BitMexWs()
-            self.ws.on_update(allowed_range[bin_size][0], self.__update)
+            self.ws.on_update(allowed_range[bin_size][0], self.__update_ohlcv)
+            self.ws.on_update('price', self.__on_update_price)
 
     def stop(self):
         """
