@@ -1,5 +1,5 @@
 # coding: UTF-8
-
+import time
 import unittest
 
 from src.bitmex_websocket import BitMexWs
@@ -16,8 +16,13 @@ class TestBitMexWs(unittest.TestCase):
         self.wait = False
 
     def wait_complete(self):
+        i = 0
         while self.wait:
-            pass
+            if i > 5:
+                raise Exception("waiting timeout")
+                break
+            i += 1
+            time.sleep(1)
 
     def set_guard(self, guard):
         self.guard = guard
@@ -33,7 +38,7 @@ class TestBitMexWs(unittest.TestCase):
             print(x)
             self.complete()
 
-        ws.on_update('1m', subscribe)
+        ws.bind('1m', subscribe)
 
         self.wait_complete()
         ws.close()
@@ -45,7 +50,7 @@ class TestBitMexWs(unittest.TestCase):
             print(x)
             self.complete()
 
-        ws.on_update('5m', subscribe)
+        ws.bind('5m', subscribe)
 
         self.wait_complete()
         ws.close()
@@ -57,7 +62,7 @@ class TestBitMexWs(unittest.TestCase):
             print(x)
             self.complete()
 
-        ws.on_update('1h', subscribe)
+        ws.bind('1h', subscribe)
 
         self.wait_complete()
         ws.close()
@@ -69,19 +74,55 @@ class TestBitMexWs(unittest.TestCase):
             print(x)
             self.complete()
 
-        ws.on_update('1d', subscribe)
+        ws.bind('1d', subscribe)
 
         self.wait_complete()
         ws.close()
 
-    def test_subscribe_price(self):
+    def test_subscribe_instrument(self):
         ws = BitMexWs()
 
         def subscribe(x):
             print(x)
             self.complete()
 
-        ws.on_update('price', subscribe)
+        ws.bind('instrument', subscribe)
+
+        self.wait_complete()
+        ws.close()
+
+    def test_subscribe_margin(self):
+        ws = BitMexWs()
+
+        def subscribe(x):
+            print(x)
+            self.complete()
+
+        ws.bind('margin', subscribe)
+
+        self.wait_complete()
+        ws.close()
+
+    def test_subscribe_position(self):
+        ws = BitMexWs()
+
+        def subscribe(x):
+            print(x)
+            self.complete()
+
+        ws.bind('position', subscribe)
+
+        self.wait_complete()
+        ws.close()
+
+    def test_subscribe_wallet(self):
+        ws = BitMexWs()
+
+        def subscribe(x):
+            print(x)
+            self.complete()
+
+        ws.bind('wallet', subscribe)
 
         self.wait_complete()
         ws.close()

@@ -419,8 +419,8 @@ class BitMex:
         self.listener = listener
         if self.is_running:
             self.ws = BitMexWs(test=self.demo)
-            self.ws.on_update(allowed_range[bin_size][0], self.__update_ohlcv)
-            self.ws.on_update('instrument', self.__on_update_instrument)
+            self.ws.bind(allowed_range[bin_size][0], self.__update_ohlcv)
+            self.ws.bind('instrument', self.__on_update_instrument)
 
     def stop(self):
         """

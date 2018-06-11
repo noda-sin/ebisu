@@ -48,7 +48,8 @@ class BitMexWs:
         else:
             domain = 'www.bitmex.com'
         endpoint = 'wss://' + domain + '/realtime?subscribe=tradeBin1m:XBTUSD,' \
-                        'tradeBin5m:XBTUSD,tradeBin1h:XBTUSD,tradeBin1d:XBTUSD,instrument:XBTUSD'
+                        'tradeBin5m:XBTUSD,tradeBin1h:XBTUSD,tradeBin1d:XBTUSD,instrument:XBTUSD,' \
+                        'margin,position:XBTUSD,wallet'
         self.ws = websocket.WebSocketApp(endpoint,
                              on_message=self.__on_message,
                              on_error=self.__on_error,
@@ -115,6 +116,15 @@ class BitMexWs:
                 elif table.startswith("instrument"):
                     self.__emit(table, data)
 
+                elif table.startswith("margin"):
+                    self.__emit(table, data)
+
+                elif table.startswith("position"):
+                    self.__emit(table, data)
+
+                elif table.startswith("wallet"):
+                    self.__emit(table, data)
+
         except Exception as e:
             logger.error(e)
 
@@ -140,7 +150,7 @@ class BitMexWs:
         """
         self.handlers['close'] = func
         
-    def on_update(self, key, func):
+    def bind(self, key, func):
         """
         新しいデータの通知先を登録する。
         :param key:
@@ -156,7 +166,13 @@ class BitMexWs:
             self.handlers['tradeBin1d'] = func
         if key == 'instrument':
             self.handlers['instrument'] = func
-    
+        if key == 'margin':
+            self.handlers['margin'] = func
+        if key == 'position':
+            self.handlers['position'] = func
+        if key == 'wallet':
+            self.handlers['wallet'] = func
+
     def close(self):
         """
         クローズする。
