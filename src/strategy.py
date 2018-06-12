@@ -259,11 +259,18 @@ class VixRci(Bot):
         exit_long = (pos > 0 and (rci_middle > 70 or (short1 or short2)))
         exit_short = (pos < 0 and (rci_middle < -70 or (long1 or long2)))
 
-        if (long1 or long2) and not (short1 or short2 or exit_long):
+        long_condition = (long1 or long2) and not exit_long and rci_short < -75 and not (
+                close[-1] < close[-2] < close[-3])
+        short_condition = (short1 or short2) and not exit_short and rci_short < 75 and not (
+                close[-1] > close[-2] > close[-3])
+        exit_condition = ((pos > 0) and (exit_long or short_condition) and rci_short > 70 and rci_middle > 60) or \
+                         ((pos < 0) and (exit_short or long_condition) and rci_short < -70 and rci_middle < -60)
+
+        if long_condition:
             self.exchange.entry("Long", True, lot)
-        elif (short1 or short2) and not (long1 or long2 or exit_short):
+        elif short_condition:
             self.exchange.entry("Short", False, lot)
-        elif exit_long or exit_short:
+        elif exit_condition:
             self.exchange.close_all()
 
 # パラボリックSAR-RSI戦略
