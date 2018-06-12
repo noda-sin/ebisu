@@ -4,7 +4,7 @@ import random
 
 from hyperopt import hp
 
-from src import highest, lowest, sma, crossover, crossunder, last, stdev, rci, rsi, sar, is_under, is_over, logger
+from src import highest, lowest, sma, crossover, crossunder, last, stdev, rci, rsi, sar, is_under, is_over
 from src.bot import Bot
 
 

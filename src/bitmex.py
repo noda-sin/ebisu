@@ -6,7 +6,6 @@ import os
 import traceback
 from datetime import datetime, timezone
 
-import bitmex
 import pandas as pd
 from bravado.exception import HTTPNotFound
 from pytz import UTC

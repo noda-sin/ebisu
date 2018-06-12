@@ -138,7 +138,6 @@ class BitMexBackTest(BitMexStub):
 
         data = pd.DataFrame()
         left_time = None
-        right_time = None
         source = None
         is_last_fetch = False
 
