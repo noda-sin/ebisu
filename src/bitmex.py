@@ -13,11 +13,14 @@ from pytz import UTC
 
 from src import logger, retry, allowed_range, to_data_frame, \
     resample, delta, FatalError, notify, ord_suffix
+from src.bitmex_api import bitmex_api
 from src.bitmex_websocket import BitMexWs
 
 
 # 本番取引用クラス
 class BitMex:
+    # wallet
+    wallet = None
     # 価格
     market_price = 0
     # ポジション
@@ -64,8 +67,8 @@ class BitMex:
             return
         api_key = os.environ.get("BITMEX_TEST_APIKEY") if self.demo else os.environ.get("BITMEX_APIKEY")
         api_secret = os.environ.get("BITMEX_TEST_SECRET") if self.demo else os.environ.get("BITMEX_SECRET")
-        self.private_client = bitmex.bitmex(test=self.demo, api_key=api_key, api_secret=api_secret)
-        self.public_client = bitmex.bitmex(test=self.demo)
+        self.private_client = bitmex_api(test=self.demo, api_key=api_key, api_secret=api_secret)
+        self.public_client = bitmex_api(test=self.demo)
 
     def now_time(self):
         """
@@ -96,7 +99,11 @@ class BitMex:
         :return:
         """
         self.__init_client()
-        return retry(lambda: self.private_client.User.User_getWallet(currency="XBt").result()[0]["amount"])
+        if self.wallet is not None:
+            return self.wallet["amount"]
+        else:  # WebSocketで取得できていない場合
+            self.wallet = retry(lambda: self.private_client.User.User_getWallet(currency="XBt").result()[0])
+            return self.wallet["amount"]
 
     def get_margin(self):
         """
@@ -117,9 +124,7 @@ class BitMex:
         :return:
         """
         self.__init_client()
-        return retry(
-            lambda: self.private_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0][
-                "leverage"])
+        return self.get_position()["leverage"]
 
     def get_position(self):
         """
@@ -481,16 +486,18 @@ class BitMex:
                     self.market_price < self.trail_price:
                 self.trail_price = self.market_price
 
+    def __on_update_wallet(self, wallet):
+        """
+         walletを更新する
+        """
+        self.wallet = wallet
+
     def __on_update_position(self, position):
         """
          ポジションを更新する
         """
         # ポジションサイズの変更がされたか
-        if 'currentQty' in self.position and \
-                'currentQty' in position:
-            is_update_pos_size = self.position['currentQty'] != position['currentQty']
-        else:
-            is_update_pos_size = False
+        is_update_pos_size = self.get_position()['currentQty'] != position['currentQty']
 
         # ポジションサイズが変更された場合、トレイル開始価格を現在の価格にリセットする
         if is_update_pos_size and position['currentQty'] != 0:
@@ -518,6 +525,7 @@ class BitMex:
             self.ws = BitMexWs(test=self.demo)
             self.ws.bind(allowed_range[bin_size][0], self.__update_ohlcv)
             self.ws.bind('instrument', self.__on_update_instrument)
+            self.ws.bind('wallet', self.__on_update_wallet)
             self.ws.bind('position', self.__on_update_position)
             self.ws.bind('margin', self.__on_update_margin)
 
