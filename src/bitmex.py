@@ -520,7 +520,7 @@ class BitMex:
         self.position = position
 
         # 利確損切の評価
-        self.__eval_exit()
+        self.eval_exit()
 
     def __on_update_margin(self, margin):
         """
