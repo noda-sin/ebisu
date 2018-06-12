@@ -168,6 +168,20 @@ class BitMex:
                                       .Instrument.Instrument_get(symbol="XBTUSD").result()[0][0]["lastPrice"])
             return self.market_price
 
+    def get_trail_price(self):
+        """
+        Trail Priceを取得する。
+        :return:
+        """
+        return self.trail_price
+
+    def set_trail_price(self, value):
+        """
+        Trail Priceを設定する。
+        :return:
+        """
+        self.trail_price = value
+
     def get_commission(self):
         """
         手数料を取得する。
@@ -378,7 +392,7 @@ class BitMex:
         """
         return self.exit_order
 
-    def __eval_exit(self):
+    def eval_exit(self):
         """
         利確、損切戦略の評価
         """
@@ -388,13 +402,13 @@ class BitMex:
         unrealised_pnl = self.get_position()['unrealisedPnl']
 
         # trail assetが設定されていたら
-        if self.get_exit_order()['trail_offset'] > 0 and self.trail_price > 0:
+        if self.get_exit_order()['trail_offset'] > 0 and self.get_trail_price() > 0:
             if self.get_position_size() > 0 and \
-                    self.get_market_price() - self.get_exit_order()['trail_offset'] < self.trail_price:
+                    self.get_market_price() - self.get_exit_order()['trail_offset'] < self.get_trail_price():
                 logger.info(f"Loss cut by trailing stop: {self.get_exit_order()['trail_offset']}")
                 self.close_all()
             elif self.get_position_size() < 0 and \
-                    self.get_market_price() + self.get_exit_order()['trail_offset'] > self.trail_price:
+                    self.get_market_price() + self.get_exit_order()['trail_offset'] > self.get_trail_price():
                 logger.info(f"Loss cut by trailing stop: {self.get_exit_order()['trail_offset']}")
                 self.close_all()
 
@@ -480,11 +494,11 @@ class BitMex:
 
             # trail priceの更新
             if self.get_position_size() > 0 and \
-                    self.market_price > self.trail_price:
-                self.trail_price = self.market_price
+                    self.market_price > self.get_trail_price():
+                self.set_trail_price(self.market_price)
             if self.get_position_size() < 0 and \
-                    self.market_price < self.trail_price:
-                self.trail_price = self.market_price
+                    self.market_price < self.get_trail_price():
+                self.set_trail_price(self.market_price)
 
     def __on_update_wallet(self, wallet):
         """
@@ -501,7 +515,7 @@ class BitMex:
 
         # ポジションサイズが変更された場合、トレイル開始価格を現在の価格にリセットする
         if is_update_pos_size and position['currentQty'] != 0:
-            self.trail_price = self.get_market_price()
+            self.set_trail_price(self.market_price)
 
         self.position = position
 

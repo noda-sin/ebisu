@@ -130,17 +130,15 @@ class BitMexStub(BitMex):
         self.order_count += 1
 
         order_qty = qty if long else -qty
-        next_qty = self.position_size + order_qty
+        next_qty = self.get_position_size() + order_qty
 
-        if (self.position_size > 0 >= order_qty) or (self.position_size < 0 < order_qty):
-            if self.position_avg_price > price:
-                close_rate = ((
-                              self.position_avg_price - price) / price - self.get_commission()) * self.get_leverage()
-                profit = -1 * self.position_size * close_rate
+        if (self.get_position_size() > 0 >= order_qty) or (self.get_position_size() < 0 < order_qty):
+            if self.get_position_avg_price() > price:
+                close_rate = ((self.get_position_avg_price() - price) / price - self.get_commission()) * self.get_leverage()
+                profit = -1 * self.get_position_size() * close_rate
             else:
-                close_rate = ((
-                              price - self.position_avg_price) / self.position_avg_price - self.get_commission()) * self.get_leverage()
-                profit = self.position_size * close_rate
+                close_rate = ((price - self.get_position_avg_price()) / self.get_position_avg_price() - self.get_commission()) * self.get_leverage()
+                profit = self.get_position_size() * close_rate
 
             if profit > 0:
                 self.win_profit += profit/self.get_market_price()*100000000
@@ -178,9 +176,49 @@ class BitMexStub(BitMex):
 
             self.position_size = next_qty
             self.position_avg_price = price
+            self.set_trail_price(price)
         else:
             self.position_size = 0
             self.position_avg_price = 0
+
+    def eval_exit(self):
+        """
+        利確、損切戦略の評価
+        """
+        if self.get_position_size() == 0:
+            return
+
+        price = self.get_market_price()
+
+        # trail assetが設定されていたら
+        if self.get_exit_order()['trail_offset'] > 0 and self.get_trail_price() > 0:
+            if self.get_position_size() > 0 and \
+                    price - self.get_exit_order()['trail_offset'] < self.get_trail_price():
+                logger.info(f"Loss cut by trailing stop: {self.get_exit_order()['trail_offset']}")
+                self.close_all()
+            elif self.get_position_size() < 0 and \
+                    price + self.get_exit_order()['trail_offset'] > self.get_trail_price():
+                logger.info(f"Loss cut by trailing stop: {self.get_exit_order()['trail_offset']}")
+                self.close_all()
+
+        if self.get_position_avg_price() > price:
+            close_rate = ((self.get_position_avg_price() - price) / price - self.get_commission()) * self.get_leverage()
+            unrealised_pnl = -1 * self.get_position_size() * close_rate
+        else:
+            close_rate = ((price - self.get_position_avg_price()) / self.get_position_avg_price() - self.get_commission()) * self.get_leverage()
+            unrealised_pnl = self.get_position_size() * close_rate
+
+        # lossが設定されていたら
+        if unrealised_pnl < 0 and \
+                0 < self.get_exit_order()['loss'] < abs(unrealised_pnl):
+            logger.info(f"Loss cut by stop loss: {self.get_exit_order()['loss']}")
+            self.close_all()
+
+        # profitが設定されていたら
+        if unrealised_pnl > 0 and \
+                0 < self.get_exit_order()['profit'] < abs(unrealised_pnl):
+            logger.info(f"Take profit by stop profit: {self.get_exit_order()['profit']}")
+            self.close_all()
 
     def on_update(self, bin_size, listener):
         """
@@ -189,6 +227,11 @@ class BitMexStub(BitMex):
         """
         def __override_listener(open, close, high, low):
             new_open_orders = []
+
+            if self.get_position_size() > 0 and low > self.get_trail_price():
+                self.set_trail_price(low)
+            if self.get_position_size() < 0 and high < self.get_trail_price():
+                self.set_trail_price(high)
 
             for _, order in enumerate(self.open_orders):
                 id = order["id"]
@@ -217,5 +260,6 @@ class BitMexStub(BitMex):
 
             self.open_orders = new_open_orders
             listener(open, close, high, low)
+            self.eval_exit()
 
         BitMex.on_update(self, bin_size, __override_listener)
