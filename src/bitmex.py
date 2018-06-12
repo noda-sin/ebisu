@@ -367,6 +367,12 @@ class BitMex:
         """
         self.exit_order = {'profit': profit, 'loss': loss, 'trail_offset': trail_offset}
 
+    def get_exit_order(self):
+        """
+        利確、損切戦略を取得する
+        """
+        return self.exit_order
+
     def __eval_exit(self):
         """
         利確、損切戦略の評価
@@ -374,32 +380,29 @@ class BitMex:
         if self.get_position_size() == 0:
             return
 
-        if 'unrealisedPnl' not in self.position:
-            return
-
-        unrealised_pnl = self.position['unrealisedPnl']
+        unrealised_pnl = self.get_position()['unrealisedPnl']
 
         # trail assetが設定されていたら
-        if self.exit_order['trail_offset'] > 0 and self.trail_price > 0:
+        if self.get_exit_order()['trail_offset'] > 0 and self.trail_price > 0:
             if self.get_position_size() > 0 and \
-                    self.get_market_price() - self.exit_order['trail_offset'] < self.trail_price:
-                logger.info(f"Loss cut by trailing stop: {self.exit_order['trail_offset']}")
+                    self.get_market_price() - self.get_exit_order()['trail_offset'] < self.trail_price:
+                logger.info(f"Loss cut by trailing stop: {self.get_exit_order()['trail_offset']}")
                 self.close_all()
             elif self.get_position_size() < 0 and \
-                    self.get_market_price() + self.exit_order['trail_offset'] > self.trail_price:
-                logger.info(f"Loss cut by trailing stop: {self.exit_order['trail_offset']}")
+                    self.get_market_price() + self.get_exit_order()['trail_offset'] > self.trail_price:
+                logger.info(f"Loss cut by trailing stop: {self.get_exit_order()['trail_offset']}")
                 self.close_all()
 
         # lossが設定されていたら
         if unrealised_pnl < 0 and \
-                0 < self.exit_order['loss'] < abs(unrealised_pnl / 100000000):
-            logger.info(f"Loss cut by stop loss: {self.exit_order['loss']}")
+                0 < self.get_exit_order()['loss'] < abs(unrealised_pnl / 100000000):
+            logger.info(f"Loss cut by stop loss: {self.get_exit_order()['loss']}")
             self.close_all()
 
         # profitが設定されていたら
         if unrealised_pnl > 0 and \
-                0 < self.exit_order['profit'] < abs(unrealised_pnl / 100000000):
-            logger.info(f"Take profit by stop profit: {self.exit_order['profit']}")
+                0 < self.get_exit_order()['profit'] < abs(unrealised_pnl / 100000000):
+            logger.info(f"Take profit by stop profit: {self.get_exit_order()['profit']}")
             self.close_all()
 
     def fetch_ohlcv(self, bin_size, start_time, end_time):
