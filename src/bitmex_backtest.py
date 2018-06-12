@@ -103,10 +103,10 @@ class BitMexBackTest(BitMexStub):
             high = slice['high'].values
             low = slice['low'].values
 
-            if self.get_position_size() > 0 and low > self.get_trail_price():
-                self.set_trail_price(low)
-            if self.get_position_size() < 0 and high < self.get_trail_price():
-                self.set_trail_price(high)
+            if self.get_position_size() > 0 and low[-1] > self.get_trail_price():
+                self.set_trail_price(low[-1])
+            if self.get_position_size() < 0 and high[-1] < self.get_trail_price():
+                self.set_trail_price(high[-1])
 
             self.market_price = close[-1]
             self.time = timestamp.tz_convert('Asia/Tokyo')

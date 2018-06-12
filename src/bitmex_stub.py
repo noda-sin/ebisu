@@ -35,6 +35,13 @@ class BitMexStub(BitMex):
         """
         BitMex.__init__(self, threading=threading)
 
+    def get_lot(self):
+        """
+         ロットの計算を行う。
+         :return:
+         """
+        return int((1 - self.get_retain_rate()) * self.get_balance() / 100000000 * self.get_leverage() * self.get_market_price())
+
     def get_balance(self):
         """
         残高の取得を行う。
@@ -228,10 +235,10 @@ class BitMexStub(BitMex):
         def __override_listener(open, close, high, low):
             new_open_orders = []
 
-            if self.get_position_size() > 0 and low > self.get_trail_price():
-                self.set_trail_price(low)
-            if self.get_position_size() < 0 and high < self.get_trail_price():
-                self.set_trail_price(high)
+            if self.get_position_size() > 0 and low[-1] > self.get_trail_price():
+                self.set_trail_price(low[-1])
+            if self.get_position_size() < 0 and high[-1] < self.get_trail_price():
+                self.set_trail_price(high[-1])
 
             for _, order in enumerate(self.open_orders):
                 id = order["id"]

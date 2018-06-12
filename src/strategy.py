@@ -189,9 +189,6 @@ class VixRci(Bot):
         lot = self.exchange.get_lot()
         pos = self.exchange.get_position_size()
 
-        logger.info(f"Lot: {lot}")
-        logger.info(f"Pos: {pos}")
-
         pd = self.input('pd', int, 23)
         bbl = self.input('bbl', int, 21)
         mult = self.input('mult', float, 1.602143269229707)
