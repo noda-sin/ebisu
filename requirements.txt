@@ -2,7 +2,6 @@ matplotlib
 numpy
 ta-lib
 pandas
-bitmex
 bravado
 websocket-client
 hyperopt
