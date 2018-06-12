@@ -199,12 +199,14 @@ class BitMexStub(BitMex):
 
         # trail assetが設定されていたら
         if self.get_exit_order()['trail_offset'] > 0 and self.get_trail_price() > 0:
+            trail_offset = self.get_exit_order()['trail_offset']
+            trail_price = self.get_trail_price()
             if self.get_position_size() > 0 and \
-                    price - self.get_exit_order()['trail_offset'] < self.get_trail_price():
+                    price - trail_offset < trail_price:
                 logger.info(f"Loss cut by trailing stop: {self.get_exit_order()['trail_offset']}")
                 self.close_all()
             elif self.get_position_size() < 0 and \
-                    price + self.get_exit_order()['trail_offset'] > self.get_trail_price():
+                    price + trail_offset > trail_price:
                 logger.info(f"Loss cut by trailing stop: {self.get_exit_order()['trail_offset']}")
                 self.close_all()
 
