@@ -5,6 +5,7 @@ import json
 import os
 import threading
 import time
+import traceback
 import urllib
 
 import websocket
@@ -92,6 +93,7 @@ class BitMexWs:
         :param message:
         """
         logger.error(message)
+        logger.error(traceback.format_exc())
 
     def __on_message(self, ws, message):
         """
@@ -127,6 +129,7 @@ class BitMexWs:
 
         except Exception as e:
             logger.error(e)
+            logger.error(traceback.format_exc())
 
     def __emit(self, key, value):
         """
