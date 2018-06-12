@@ -190,18 +190,18 @@ class VixRci(Bot):
         pos = self.exchange.get_position_size()
 
         pd = self.input('pd', int, 23)
-        bbl = self.input('bbl', int, 21)
-        mult = self.input('mult', float, 1.602143269229707)
-        lb = self.input('lb', int, 95)
-        ph = self.input('ph', float, 0.19099052833148206)
-        pl = self.input('pl', float, 1.4054164079826177)
+        bbl = self.input('bbl', int, 23)
+        mult = self.input('mult', float, 1.6774175598800714)
+        lb = self.input('lb', int, 99)
+        ph = self.input('ph', float, 0.8637612775288673)
+        pl = self.input('pl', float, 1.3352574714599486)
 
-        rci_limit = self.input('rci_limit', float, 81)
-        rci_diff = self.input('rci_diff', float, 18)
+        rci_limit = self.input('rci_limit', float, 88)
+        rci_diff = self.input('rci_diff', float, 28)
 
-        itvs = self.input('itvs', int, 22)
-        itvm = self.input('itvm', int, 42)
-        itvl = self.input('itvl', int, 59)
+        itvs = self.input('itvs', int, 18)
+        itvm = self.input('itvm', int, 47)
+        itvl = self.input('itvl', int, 62)
 
         hst = highest(close, pd)
         wvf = (hst - low) / hst * 100
