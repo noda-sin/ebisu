@@ -44,6 +44,8 @@ class BitMex:
     data = None
     # 利確損切戦略
     exit_order = {'profit': 0, 'loss': 0, 'trail_offset': 0}
+    # Trailing Stopのためのピン留価格
+    trail_price = 0
 
     def __init__(self, demo=False, threading=True):
         """
@@ -84,10 +86,10 @@ class BitMex:
         :return:
         """
         if 'excessMargin' not in self.margin or \
-            'initMarginReq' not in self.position:
+                'initMarginReq' not in self.position:
             return 0
-        return math.floor((1-self.get_retain_rate()) * self.get_market_price()
-                     * self.margin['excessMargin'] / (self.position['initMarginReq'] * 100000000))
+        return math.floor((1 - self.get_retain_rate()) * self.get_market_price()
+                          * self.margin['excessMargin'] / (self.position['initMarginReq'] * 100000000))
 
     def get_balance(self):
         """
@@ -103,34 +105,48 @@ class BitMex:
         :return:
         """
         self.__init_client()
-        return retry(lambda: self.private_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0]["leverage"])
+        return retry(
+            lambda: self.private_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0][
+                "leverage"])
 
     def get_position_size(self):
         """
         現在のポジションサイズを取得する。
         :return:
         """
+        self.__init_client()
         if 'currentQty' in self.position:
             return self.position['currentQty']
-        else:
-            return 0
+        else:  # WebSocketで取得できていない場合
+            self.position = retry(lambda: self.private_client
+                                  .Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0])
+            return self.position['currentQty']
 
     def get_position_avg_price(self):
         """
         現在のポジションの平均価格を取得する。
         :return:
         """
+        self.__init_client()
         if 'avgEntryPrice' in self.position:
             return self.position['avgEntryPrice']
-        else:
-            return 0
+        else:  # WebSocketで取得できていない場合
+            self.position = retry(lambda: self.private_client
+                                  .Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0])
+            return self.position['avgEntryPrice']
 
     def get_market_price(self):
         """
         現在の取引額を取得する。
         :return:
         """
-        return self.market_price
+        self.__init_client()
+        if self.market_price != 0:
+            return self.market_price
+        else:  # WebSocketで取得できていない場合
+            self.market_price = retry(lambda: self.public_client
+                                      .Instrument.Instrument_get(symbol="XBTUSD").result()[0][0]["lastPrice"])
+            return self.market_price
 
     def get_commission(self):
         """
@@ -188,7 +204,8 @@ class BitMex:
         if limit > 0 and stop > 0:
             ord_type = "StopLimit"
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
-                                                              side=side, orderQty=ord_qty, price=limit, stopPx=stop).result())
+                                                              side=side, orderQty=ord_qty, price=limit,
+                                                              stopPx=stop).result())
         elif limit > 0:
             ord_type = "Limit"
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
@@ -296,7 +313,7 @@ class BitMex:
         self.__init_client()
 
         if 'excessMargin' not in self.margin or \
-                self.margin['excessMargin'] <= 0  or \
+                self.margin['excessMargin'] <= 0 or \
                 qty <= 0:
             return
 
@@ -307,7 +324,7 @@ class BitMex:
         ord_qty = qty
 
         order = self.get_open_order(id)
-        ord_id = id+ord_suffix() if order is None else order["clOrdID"]
+        ord_id = id + ord_suffix() if order is None else order["clOrdID"]
 
         if order is None:
             self.__new_order(ord_id, side, ord_qty, limit, stop)
@@ -322,8 +339,8 @@ class BitMex:
         """
         self.__init_client()
         open_orders = retry(lambda: self.private_client
-                     .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True}))
-                     .result()[0])
+                            .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True}))
+                            .result()[0])
         open_orders = [o for o in open_orders if o["clOrdID"].startswith(id)]
         if len(open_orders) > 0:
             return open_orders[0]
@@ -351,14 +368,28 @@ class BitMex:
 
         unrealised_pnl = self.position['unrealisedPnl']
 
-        if unrealised_pnl > 0 and \
-                0 < self.exit_order['profit'] < abs(unrealised_pnl / 100000000):
-            self.close_all()
-        elif unrealised_pnl < 0 and \
+        # trail assetが設定されていたら
+        if self.exit_order['trail_offset'] > 0 and self.trail_price > 0:
+            if self.get_position_size() > 0 and \
+                    self.get_market_price() - self.exit_order['trail_offset'] < self.trail_price:
+                logger.info(f"Loss cut by trailing stop: {self.exit_order['trail_offset']}")
+                self.close_all()
+            elif self.get_position_size() < 0 and \
+                    self.get_market_price() + self.exit_order['trail_offset'] > self.trail_price:
+                logger.info(f"Loss cut by trailing stop: {self.exit_order['trail_offset']}")
+                self.close_all()
+
+        # lossが設定されていたら
+        if unrealised_pnl < 0 and \
                 0 < self.exit_order['loss'] < abs(unrealised_pnl / 100000000):
+            logger.info(f"Loss cut by stop loss: {self.exit_order['loss']}")
             self.close_all()
 
-        # TODO: trailing stop
+        # profitが設定されていたら
+        if unrealised_pnl > 0 and \
+                0 < self.exit_order['profit'] < abs(unrealised_pnl / 100000000):
+            logger.info(f"Take profit by stop profit: {self.exit_order['profit']}")
+            self.close_all()
 
     def fetch_ohlcv(self, bin_size, start_time, end_time):
         """
@@ -390,18 +421,18 @@ class BitMex:
                 self.data = pd.concat([d1, d2])
             else:
                 self.data = d1
-            resample_data = self.data
+            re_sample_data = self.data
         else:
             self.data = pd.concat([self.data, new_data])
-            resample_data = resample(self.data, self.bin_size)
+            re_sample_data = resample(self.data, self.bin_size)
 
-        if self.data.iloc[-1].name == resample_data.iloc[-1].name:
-            self.data = resample_data.iloc[-1*self.ohlcv_len:,:]
+        if self.data.iloc[-1].name == re_sample_data.iloc[-1].name:
+            self.data = re_sample_data.iloc[-1 * self.ohlcv_len:, :]
 
-        open = resample_data['open'].values
-        close = resample_data['close'].values
-        high = resample_data['high'].values
-        low = resample_data['low'].values
+        open = re_sample_data['open'].values
+        close = re_sample_data['close'].values
+        high = re_sample_data['high'].values
+        low = re_sample_data['low'].values
 
         try:
             if self.listener is not None:
@@ -428,11 +459,31 @@ class BitMex:
         if 'lastPrice' in instrument:
             self.market_price = instrument['lastPrice']
 
+            # trail priceの更新
+            if self.get_position_size() > 0 and \
+                    self.market_price > self.trail_price:
+                self.trail_price = self.market_price
+            if self.get_position_size() < 0 and \
+                    self.market_price < self.trail_price:
+                self.trail_price = self.market_price
+
     def __on_update_position(self, position):
         """
          ポジションを更新する
         """
+        # ポジションサイズの変更がされたか
+        if 'currentQty' in self.position and \
+                'currentQty' in position:
+            is_update_pos_size = self.position['currentQty'] != position['currentQty']
+        else:
+            is_update_pos_size = False
+
+        # ポジションサイズが変更された場合、トレイル開始価格を現在の価格にリセットする
+        if is_update_pos_size and position['currentQty'] != 0:
+            self.trail_price = self.get_market_price()
+
         self.position = position
+
         # 利確損切の評価
         self.__eval_exit()
 
