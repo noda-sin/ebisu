@@ -21,9 +21,9 @@ class BitMex:
     # 価格
     market_price = 0
     # ポジション
-    position = {}
+    position = None
     # マージン
-    margin = {}
+    margin = None
     # 利用する時間足
     bin_size = '1h'
     # プライベートAPI用クライアント
@@ -85,11 +85,10 @@ class BitMex:
         ロットの計算を行う。
         :return:
         """
-        if 'excessMargin' not in self.margin or \
-                'initMarginReq' not in self.position:
-            return 0
+        margin = self.get_margin()
+        position = self.get_position()
         return math.floor((1 - self.get_retain_rate()) * self.get_market_price()
-                          * self.margin['excessMargin'] / (self.position['initMarginReq'] * 100000000))
+                          * margin['excessMargin'] / (position['initMarginReq'] * 100000000))
 
     def get_balance(self):
         """
@@ -98,6 +97,19 @@ class BitMex:
         """
         self.__init_client()
         return retry(lambda: self.private_client.User.User_getWallet(currency="XBt").result()[0]["amount"])
+
+    def get_margin(self):
+        """
+        マージンの取得
+        :return:
+        """
+        self.__init_client()
+        if self.margin is not None:
+            return self.margin
+        else:  # WebSocketで取得できていない場合
+            self.margin = retry(lambda: self.private_client
+                                  .User.User_getMargin(currency="XBt").result()[0])
+            return self.margin
 
     def get_leverage(self):
         """
@@ -109,18 +121,26 @@ class BitMex:
             lambda: self.private_client.Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0][
                 "leverage"])
 
+    def get_position(self):
+        """
+        現在のポジションを取得する。
+        :return:
+        """
+        self.__init_client()
+        if self.position is not None:
+            return self.position
+        else:  # WebSocketで取得できていない場合
+            self.position = retry(lambda: self.private_client
+                                  .Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0])
+            return self.position
+
     def get_position_size(self):
         """
         現在のポジションサイズを取得する。
         :return:
         """
         self.__init_client()
-        if 'currentQty' in self.position:
-            return self.position['currentQty']
-        else:  # WebSocketで取得できていない場合
-            self.position = retry(lambda: self.private_client
-                                  .Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0])
-            return self.position['currentQty']
+        return self.get_position()['currentQty']
 
     def get_position_avg_price(self):
         """
@@ -128,12 +148,7 @@ class BitMex:
         :return:
         """
         self.__init_client()
-        if 'avgEntryPrice' in self.position:
-            return self.position['avgEntryPrice']
-        else:  # WebSocketで取得できていない場合
-            self.position = retry(lambda: self.private_client
-                                  .Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0])
-            return self.position['avgEntryPrice']
+        return self.get_position()['avgEntryPrice']
 
     def get_market_price(self):
         """
@@ -278,9 +293,7 @@ class BitMex:
         """
         self.__init_client()
 
-        if 'excessMargin' not in self.margin or \
-                self.margin['excessMargin'] <= 0 or \
-                qty <= 0:
+        if self.get_margin()['excessMargin'] <= 0 or qty <= 0:
             return
 
         if not when:
@@ -312,9 +325,7 @@ class BitMex:
         """
         self.__init_client()
 
-        if 'excessMargin' not in self.margin or \
-                self.margin['excessMargin'] <= 0 or \
-                qty <= 0:
+        if self.get_margin()['excessMargin'] <= 0 or qty <= 0:
             return
 
         if not when:
