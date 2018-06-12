@@ -102,7 +102,7 @@ class BitMex:
         if self.wallet is not None:
             return self.wallet["amount"]
         else:  # WebSocketで取得できていない場合
-            self.wallet = retry(lambda: self.private_client.User.User_getWallet(currency="XBt").result()[0])
+            self.wallet = retry(lambda: self.private_client.User.User_getWallet(currency="XBt").result())
             return self.wallet["amount"]
 
     def get_margin(self):
@@ -115,7 +115,7 @@ class BitMex:
             return self.margin
         else:  # WebSocketで取得できていない場合
             self.margin = retry(lambda: self.private_client
-                                  .User.User_getMargin(currency="XBt").result()[0])
+                                  .User.User_getMargin(currency="XBt").result())
             return self.margin
 
     def get_leverage(self):
@@ -136,7 +136,7 @@ class BitMex:
             return self.position
         else:  # WebSocketで取得できていない場合
             self.position = retry(lambda: self.private_client
-                                  .Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result()[0][0])
+                                  .Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result())[0]
             return self.position
 
     def get_position_size(self):
@@ -165,7 +165,7 @@ class BitMex:
             return self.market_price
         else:  # WebSocketで取得できていない場合
             self.market_price = retry(lambda: self.public_client
-                                      .Instrument.Instrument_get(symbol="XBTUSD").result()[0][0]["lastPrice"])
+                                      .Instrument.Instrument_get(symbol="XBTUSD").result())[0]["lastPrice"]
             return self.market_price
 
     def get_trail_price(self):
@@ -194,7 +194,7 @@ class BitMex:
         すべての注文をキャンセルする。
         """
         self.__init_client()
-        orders = retry(lambda: self.private_client.Order.Order_cancelAll().result()[0])
+        orders = retry(lambda: self.private_client.Order.Order_cancelAll().result())
         for order in orders:
             logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
                         f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
@@ -206,7 +206,7 @@ class BitMex:
         すべてのポジションを解消する。
         """
         self.__init_client()
-        order = retry(lambda: self.private_client.Order.Order_closePosition(symbol="XBTUSD").result()[0])
+        order = retry(lambda: self.private_client.Order.Order_closePosition(symbol="XBTUSD").result())
         logger.info(f"Close Position : (orderID, orderType, side, orderQty, limit, stop) = "
                     f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
                     f"{order['price']}, {order['stopPx']})")
@@ -224,7 +224,7 @@ class BitMex:
             return
 
         try:
-            retry(lambda: self.private_client.Order.Order_cancel(orderID=order['orderID']).result()[0][0])
+            retry(lambda: self.private_client.Order.Order_cancel(orderID=order['orderID']).result())[0]
         except HTTPNotFound:
             return
         logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
@@ -370,7 +370,7 @@ class BitMex:
         self.__init_client()
         open_orders = retry(lambda: self.private_client
                             .Order.Order_getOrders(filter=json.dumps({"symbol": "XBTUSD", "open": True}))
-                            .result()[0])
+                            .result())
         open_orders = [o for o in open_orders if o["clOrdID"].startswith(id)]
         if len(open_orders) > 0:
             return open_orders[0]
@@ -435,7 +435,7 @@ class BitMex:
         fetch_bin_size = allowed_range[bin_size][0]
         data = retry(lambda: self.public_client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=fetch_bin_size,
                                                                         startTime=start_time, endTime=end_time,
-                                                                        count=500, partial=False).result()[0])
+                                                                        count=500, partial=False).result())
         data_frame = to_data_frame(data)
         return resample(data_frame, bin_size)
 
