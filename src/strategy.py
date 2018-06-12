@@ -4,7 +4,7 @@ import random
 
 from hyperopt import hp
 
-from src import highest, lowest, sma, crossover, crossunder, last, stdev, rci, rsi, sar, is_under, is_over
+from src import highest, lowest, sma, crossover, crossunder, last, stdev, rci, rsi, sar, is_under, is_over, logger
 from src.bot import Bot
 
 
@@ -186,9 +186,17 @@ class VixRci(Bot):
         }
 
     def strategy(self, open, close, high, low):
+        logger.info(f"Eval Strategy")
+        logger.info(f"Open:  {open}")
+        logger.info(f"Close: {close}")
+        logger.info(f"High:  {high}")
+        logger.info(f"Low:   {low}")
 
         lot = self.exchange.get_lot()
         pos = self.exchange.get_position_size()
+
+        logger.info(f"Lot: {lot}")
+        logger.info(f"Pos: {pos}")
 
         pd = self.input('pd', int, 23)
         bbl = self.input('bbl', int, 21)
