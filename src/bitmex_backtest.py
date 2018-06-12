@@ -154,7 +154,7 @@ class BitMexBackTest(BitMexStub):
                 right_time = end_time
                 is_last_fetch = True
 
-            source = retry(lambda: self.fetch_ohlcv(bin_size=bin_size, start_time=left_time, end_time=right_time))
+            source = self.fetch_ohlcv(bin_size=bin_size, start_time=left_time, end_time=right_time)
             data = pd.concat([data, source])
 
             if is_last_fetch:
