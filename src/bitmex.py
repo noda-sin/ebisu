@@ -90,6 +90,8 @@ class BitMex:
         """
         margin = self.get_margin()
         position = self.get_position()
+        logger.info(f"margin: {margin}")
+        logger.info(f"position: {position}")
         return math.floor((1 - self.get_retain_rate()) * self.get_market_price()
                           * margin['excessMargin'] / (position['initMarginReq'] * 100000000))
 
