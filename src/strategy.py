@@ -186,12 +186,6 @@ class VixRci(Bot):
         }
 
     def strategy(self, open, close, high, low):
-        logger.info(f"Eval Strategy")
-        logger.info(f"Open:  {open}")
-        logger.info(f"Close: {close}")
-        logger.info(f"High:  {high}")
-        logger.info(f"Low:   {low}")
-
         lot = self.exchange.get_lot()
         pos = self.exchange.get_position_size()
 
