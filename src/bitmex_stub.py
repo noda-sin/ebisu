@@ -81,10 +81,11 @@ class BitMexStub(BitMex):
         すべてのポジションを解消する。
         """
         pos_size = self.position_size
-        if pos_size > 0:
-            self.entry("CLOSE", False, abs(pos_size))
-        elif pos_size < 0:
-            self.entry("CLOSE", True, abs(pos_size))
+        if pos_size == 0:
+            return
+        long = pos_size < 0
+        ord_qty = abs(pos_size)
+        self.commit(id, long, ord_qty, self.get_market_price())
 
     def cancel(self, id):
         """

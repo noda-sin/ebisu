@@ -92,12 +92,10 @@ class BitMexBackTest(BitMexStub):
         """
         すべてのポジションを解消する。
         """
-        pos_size = self.get_position_size()
-
+        if self.get_position_size() == 0:
+            return 
         BitMexStub.close_all(self)
-
-        if pos_size != 0:
-            self.close_signals.append(self.index)
+        self.close_signals.append(self.index)
 
     def __crawler_run(self):
         """
