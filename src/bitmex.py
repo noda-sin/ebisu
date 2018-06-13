@@ -80,7 +80,7 @@ class BitMex:
         証拠金維持率。
         :return:
         """
-        return 0.2
+        return 0.8
 
     def get_lot(self):
         """
