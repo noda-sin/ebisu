@@ -503,7 +503,7 @@ class BitMex:
         """
          walletを更新する
         """
-        self.wallet = {**self.wallet, **wallet}
+        self.wallet = {**self.wallet, **wallet} if self.wallet is not None else self.wallet
 
     def __on_update_position(self, position):
         """
@@ -516,7 +516,7 @@ class BitMex:
         if is_update_pos_size and position['currentQty'] != 0:
             self.set_trail_price(self.market_price)
 
-        self.position = {**self.position, **position}
+        self.position = {**self.position, **position} if self.position is not None else self.position
 
         # 利確損切の評価
         self.eval_exit()
@@ -525,7 +525,7 @@ class BitMex:
         """
          マージンを更新する
         """
-        self.margin = {**self.margin, **margin}
+        self.margin = {**self.margin, **margin} if self.margin is not None else self.margin
 
     def on_update(self, bin_size, listener):
         """
