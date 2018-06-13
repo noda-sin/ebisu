@@ -27,6 +27,8 @@ class BitMexBackTest(BitMexStub):
     buy_signals = []
     # 売り履歴
     sell_signals = []
+    # EXIT履歴
+    close_signals = []
     # 残高履歴
     balance_history = []
     # 残高の開始
@@ -85,6 +87,17 @@ class BitMexBackTest(BitMexStub):
             self.buy_signals.append(self.index)
         else:
             self.sell_signals.append(self.index)
+
+    def close_all(self):
+        """
+        すべてのポジションを解消する。
+        """
+        pos_size = self.get_position_size()
+
+        BitMexStub.close_all(self)
+
+        if pos_size != 0:
+            self.close_signals.append(self.index)
 
     def __crawler_run(self):
         """
@@ -209,6 +222,7 @@ class BitMexBackTest(BitMexStub):
         ymax = max(self.df_ohlcv["high"]) + 200
         plt.vlines(self.buy_signals, ymin, ymax, "blue", linestyles='dashed', linewidth=1)
         plt.vlines(self.sell_signals, ymin, ymax, "red", linestyles='dashed', linewidth=1)
+        plt.vlines(self.close_signals, ymin, ymax, "green", linestyles='dashed', linewidth=1)
 
         i = i + 1
 
