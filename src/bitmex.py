@@ -89,8 +89,6 @@ class BitMex:
         """
         margin = self.get_margin()
         position = self.get_position()
-        logger.info(f"margin: {margin}")
-        logger.info(f"position: {position}")
         return math.floor((1 - self.get_retain_rate()) * self.get_market_price()
                           * margin['excessMargin'] / (position['initMarginReq'] * 100000000))
 
@@ -505,7 +503,7 @@ class BitMex:
         """
          walletを更新する
         """
-        self.wallet = wallet
+        self.wallet = {**self.wallet, **wallet}
 
     def __on_update_position(self, position):
         """
@@ -518,7 +516,7 @@ class BitMex:
         if is_update_pos_size and position['currentQty'] != 0:
             self.set_trail_price(self.market_price)
 
-        self.position = position
+        self.position = {**self.position, **position}
 
         # 利確損切の評価
         self.eval_exit()
@@ -527,7 +525,7 @@ class BitMex:
         """
          マージンを更新する
         """
-        self.margin = margin
+        self.margin = {**self.margin, **margin}
 
     def on_update(self, bin_size, listener):
         """
