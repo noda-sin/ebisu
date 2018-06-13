@@ -11,7 +11,8 @@ import urllib
 import websocket
 from datetime import datetime
 
-from src import logger, to_data_frame
+from src import logger, to_data_frame, notify
+
 
 def generate_nonce():
     return int(round(time.time() * 1000))
@@ -94,6 +95,9 @@ class BitMexWs:
         """
         logger.error(message)
         logger.error(traceback.format_exc())
+
+        notify(f"Error occurred. {message}")
+        notify(traceback.format_exc())
 
     def __on_message(self, ws, message):
         """
