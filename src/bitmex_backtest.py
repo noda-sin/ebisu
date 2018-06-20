@@ -122,22 +122,22 @@ class BitMexBackTest(BitMexStub):
             self.market_price = close[-1]
             self.time = timestamp.tz_convert('Asia/Tokyo')
             self.index = timestamp
-            self.listener(open, close, high, low)
-            self.balance_history.append((self.get_balance() - self.start_balance)/100000000*self.get_market_price())
+            self.strategy(open, close, high, low)
+
+            self.balance_history.append((self.get_balance() - self.start_balance) / 100000000 * self.get_market_price())
             self.eval_exit()
 
         self.close_all()
-
         logger.info(f"Back test time : {time.time() - start}")
 
-    def on_update(self, bin_size, listener):
+    def on_update(self, bin_size, strategy):
         """
         戦略の関数を登録する。
-        :param listener:
+        :param strategy:
         """
         self.__load_ohlcv(bin_size)
 
-        BitMexStub.on_update(self, bin_size, listener)
+        BitMexStub.on_update(self, bin_size, strategy)
         self.__crawler_run()
 
     def download_data(self, file, bin_size, start_time, end_time):

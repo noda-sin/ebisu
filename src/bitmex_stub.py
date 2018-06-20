@@ -230,12 +230,12 @@ class BitMexStub(BitMex):
             logger.info(f"Take profit by stop profit: {self.get_exit_order()['profit']}")
             self.close_all()
 
-    def on_update(self, bin_size, listener):
+    def on_update(self, bin_size, strategy):
         """
         戦略の関数を登録する。
-        :param listener:
+        :param strategy:
         """
-        def __override_listener(open, close, high, low):
+        def __override_strategy(open, close, high, low):
             new_open_orders = []
 
             if self.get_position_size() > 0 and low[-1] > self.get_trail_price():
@@ -269,7 +269,7 @@ class BitMexStub(BitMex):
                 new_open_orders.append(order)
 
             self.open_orders = new_open_orders
-            listener(open, close, high, low)
+            strategy(open, close, high, low)
             self.eval_exit()
 
-        BitMex.on_update(self, bin_size, __override_listener)
+        BitMex.on_update(self, bin_size, __override_strategy)

@@ -37,7 +37,7 @@ class BitMex:
     # 時間足を取得するクローラ
     crawler = None
     # 戦略を実施するリスナー
-    listener = None
+    strategy = None
     # ログの出力
     enable_trade_log = True
     # OHLCの長さ
@@ -467,8 +467,8 @@ class BitMex:
         low = re_sample_data['low'].values
 
         try:
-            if self.listener is not None:
-                self.listener(open, close, high, low)
+            if self.strategy is not None:
+                self.strategy(open, close, high, low)
         except FatalError as e:
             # 致命的エラー
             logger.error(f"Fatal error. {e}")
@@ -527,13 +527,13 @@ class BitMex:
         """
         self.margin = {**self.margin, **margin} if self.margin is not None else self.margin
 
-    def on_update(self, bin_size, listener):
+    def on_update(self, bin_size, strategy):
         """
         戦略の関数を登録する。
-        :param listener:
+        :param strategy:
         """
         self.bin_size = bin_size
-        self.listener = listener
+        self.strategy = strategy
         if self.is_running:
             self.ws = BitMexWs(test=self.demo)
             self.ws.bind(allowed_range[bin_size][0], self.__update_ohlcv)
