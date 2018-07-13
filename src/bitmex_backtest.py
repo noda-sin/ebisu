@@ -178,7 +178,7 @@ class BitMexBackTest(BitMexStub):
         データを読み込む。
         :return:
         """
-        start_time = datetime.now(timezone.utc) - 3 * timedelta(days=31)
+        start_time = datetime.now(timezone.utc) - 1 * timedelta(days=31)
         end_time = datetime.now(timezone.utc)
         file = OHLC_FILENAME.format(bin_size)
 
