@@ -16,7 +16,6 @@ BitMex用トレーディングボットプログラム。
 1. チャネルブレイクアウト戦略
 2. SMAのクロス戦略
 3. Rci戦略
-4. VixRci戦略
 
 ## 依存環境
 
@@ -24,7 +23,9 @@ BitMex用トレーディングボットプログラム。
 
 ## インストール方法
 
-### OSX
+### 1. パッケージのインストール
+
+#### OSX の場合
 
 ```bash
 $ brew install talib
@@ -33,7 +34,7 @@ $ cd ebisu/
 $ python install -r requirements.txt
 ```
 
-### LINUX
+#### LINUX の場合
 
 ```bash
 $ wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
@@ -47,38 +48,77 @@ $ cd ebisu/
 $ python install -r requirements.txt
 ```
 
+### 2. 環境変数の設定
+
+以下のように環境変数 `BITMEX_APIKEY`, `BITMEX_SECRET` で BitMex のAPIキーを設定します。
+
+```bash
+$ vi ~/.bash_profile
+BITMEX_APIKEY=***********
+BITMEX_SECRET=***********
+```
+
+LINEへの通知がしたい場合は、環境変数 `LINE_APIKEY` に LINE のAPIキーを設定します。
+
+```bash
+$ vi ~/.bash_profile
+LINE_APIKEY=***********
+```
+
 ## 実行方法
 
 ```bash
-$ python main.py -h
-usage: main.py [-h] [--test] [--stub] [--demo] --strategy STRATEGY
-
-This is trading script on bitmex
-
-optional arguments:
-  -h, --help           show this help message and exit
-  --test
-  --stub
-  --demo
-  --strategy STRATEGY
+$ python main.py --strategy STRATEGY
  ```
 
-本番でのトレーディング
+`STRATEGY` の箇所を変えることで、利用する戦略を切り替えることができます。
+
+#### 例) チャネルブレイクアウト戦略 を利用する場合
+
+ ```bash
+ $ python main --strategy Doten
+ ```
+
+## モード
+### 1. 本稼働モード
+
+`--strategy` 引数のみを設定することで、本稼働での取引を行えます。
 
 ```bash
-$ vi ~/.bashrc
-BITMEX_APIKEY=***********
-BITMEX_SECRET=***********
 $ python main.py --strategy Doten
 ```
 
-バックテスト
+### 2. デモモード
+
+`--demo` 引数を追加することで、[testnet](https://testnet.bitmex.com/) での取引を行えます。
 
 ```bash
-$ vi ~/.bashrc
-BITMEX_TEST_APIKEY=***********
-BITMEX_TEST_SECRET=***********
 $ python main.py --test --strategy Doten
+```
+
+### 3. バックテストモード
+
+`--test` 引数を追加することで、戦略のバックテストを行えます。テスト結果後には、グラフが表示されます。
+
+```bash
+$ python main.py --test --strategy Doten
+```
+
+### 4. Hyperoptモード
+
+`--hyperopt` 引数を追加することで、Hyperoptを使ったパラメータ最適化を行えます。
+
+```bash
+$ python main.py --hyperopt --strategy Doten
+```
+
+### 5. スタブモード
+
+`--stub` 引数を追加することで、架空の口座を使ったリアルなテストが行えます。
+このモードの動作は、あまりテストしていません。。。
+
+```bash
+$ python main.py --stub --strategy Doten
 ```
 
 ## 戦略の追加方法
@@ -94,6 +134,9 @@ class Sample(Bot):
         # 1分足で直近10期間の情報を戦略で必要とする場合
         Bot.__init__(self, '1m', 10)
 
+    def options(self):
+        return {}
+
     def strategy(self, open, close, high, low):
         lot = self.exchange.get_lot()
         which = random.randrange(2)
@@ -101,4 +144,10 @@ class Sample(Bot):
             self.exchange.entry("Long", True, lot)
         else:
             self.exchange.entry("Short", False, lot)
+```
+
+以下のように `--strategy` 引数で戦略クラス名を指定すると、追加した戦略でBotを稼働させることができます。
+
+```
+$ python main.py --strategy Sample
 ```
