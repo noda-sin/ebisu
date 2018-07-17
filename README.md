@@ -78,7 +78,7 @@ $ python main.py --strategy STRATEGY
 #### 例) チャネルブレイクアウト戦略 を利用する場合
 
  ```bash
- $ python main --strategy Doten
+ $ python main.py --strategy Doten
  ```
 
 ## モード
