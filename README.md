@@ -156,7 +156,7 @@ $ python main.py --strategy Sample
 
 ## 投げ銭
 
-支援いただける方は、以下のWalletにBTCを送付ください。
+ご支援いただける方は、以下のWalletにBTCを送付ください。
 
 1GPjM5AkdBDJnCouQ9AcS4mhUhdysXYCW1
 
