@@ -153,3 +153,13 @@ class Sample(Bot):
 ```
 $ python main.py --strategy Sample
 ```
+
+## 投げ銭
+
+支援いただける方は、以下のWalletにBTCを送付ください。
+
+1GPjM5AkdBDJnCouQ9AcS4mhUhdysXYCW1
+
+## その他
+
+質問、バグ報告、機能追加、戦略の実装依頼などは、[issue](https://github.com/noda-sin/ebisu/issues) もしくは、 Twitterアカウント[@noda_sin](https://twitter.com/noda_sin) にDMでお問い合わせください。
