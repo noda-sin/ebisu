@@ -1,4 +1,4 @@
-# Ebisu
+# ゑびす
 
 <img src="img/ebisusama.png" width="200">
 
