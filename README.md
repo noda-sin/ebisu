@@ -33,7 +33,7 @@ BitMex用トレーディングボットプログラム。
 $ brew install talib
 $ git clone https://github.com/noda-sin/ebisu.git
 $ cd ebisu/
-$ python install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 
 #### LINUX の場合
@@ -47,7 +47,7 @@ $ make
 $ sudo make install
 $ git clone https://github.com/noda-sin/ebisu.git
 $ cd ebisu/
-$ python install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 
 ### 2. 環境変数の設定
