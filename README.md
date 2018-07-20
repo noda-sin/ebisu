@@ -31,7 +31,7 @@ BitMex用トレーディングボットプログラム。
 
 ```bash
 $ brew install talib
-$ git clone git@gitlab.com:noda.sin/ebisu.git
+$ git clone https://github.com/noda-sin/ebisu.git
 $ cd ebisu/
 $ python install -r requirements.txt
 ```
