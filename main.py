@@ -3,6 +3,7 @@
 
 import argparse
 import signal
+import time
 
 from src.factory import BotFactory
 
@@ -24,4 +25,4 @@ if __name__ == "__main__":
         # 停止処理を登録する
         signal.signal(signal.SIGINT, lambda x, y: bot.stop())
         while True:
-            pass
+            time.sleep(1)

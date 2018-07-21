@@ -85,7 +85,7 @@ class BitMexWs:
         """
         self.ws.run_forever()
         while self.is_running:
-            pass
+            time.sleep(1)
 
     def __on_error(self, ws, message):
         """
