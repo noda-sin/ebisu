@@ -56,15 +56,15 @@ $ pip install -r requirements.txt
 
 ```bash
 $ vi ~/.bash_profile
-BITMEX_APIKEY=***********
-BITMEX_SECRET=***********
+export BITMEX_APIKEY=***********
+export BITMEX_SECRET=***********
 ```
 
 LINEへの通知がしたい場合は、環境変数 `LINE_APIKEY` に LINE のAPIキーを設定します。
 
 ```bash
 $ vi ~/.bash_profile
-LINE_APIKEY=***********
+export LINE_APIKEY=***********
 ```
 
 ## 実行方法
