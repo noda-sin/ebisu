@@ -229,6 +229,22 @@ def rci(src, itv):
            for i in range(2)]
     return ret[::-1]
 
+def vix(close, low, pd=23, bbl=23, mult=1.9, lb=88, ph=0.85, pl=1.01):
+    hst = highest(close, pd)
+    wvf = (hst - low) / hst * 100
+    s_dev = mult * stdev(wvf, bbl)
+    mid_line = sma(wvf, bbl)
+    lower_band = mid_line - s_dev
+    upper_band = mid_line + s_dev
+
+    range_high = (highest(wvf, lb)) * ph
+    range_low = (lowest(wvf, lb)) * pl
+
+    green_hist = [wvf[-i] >= upper_band[-i] or wvf[-i] >= range_high[-i] for i in range(8)][::-1]
+    red_hist = [wvf[-i] <= lower_band[-i] or wvf[-i] <= range_low[-i] for i in range(8)][::-1]
+
+    return green_hist, red_hist
+
 
 def is_under(src, value, p):
     for i in range(p, -1, -1):
