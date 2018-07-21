@@ -465,10 +465,11 @@ class BitMex:
         close = re_sample_data['close'].values
         high = re_sample_data['high'].values
         low = re_sample_data['low'].values
+        volume = re_sample_data['volume'].values
 
         try:
             if self.strategy is not None:
-                self.strategy(open, close, high, low)
+                self.strategy(open, close, high, low, volume)
         except FatalError as e:
             # 致命的エラー
             logger.error(f"Fatal error. {e}")

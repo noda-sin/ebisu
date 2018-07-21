@@ -113,6 +113,7 @@ class BitMexBackTest(BitMexStub):
             open = slice['open'].values
             high = slice['high'].values
             low = slice['low'].values
+            volume = slice['volume'].values
 
             if self.get_position_size() > 0 and low[-1] > self.get_trail_price():
                 self.set_trail_price(low[-1])
@@ -122,7 +123,7 @@ class BitMexBackTest(BitMexStub):
             self.market_price = close[-1]
             self.time = timestamp.tz_convert('Asia/Tokyo')
             self.index = timestamp
-            self.strategy(open, close, high, low)
+            self.strategy(open, close, high, low, volume)
 
             self.balance_history.append((self.get_balance() - self.start_balance) / 100000000 * self.get_market_price())
             self.eval_exit()

@@ -61,13 +61,14 @@ class Bot:
         else:
             return defval
 
-    def strategy(self, open, close, high, low):
+    def strategy(self, open, close, high, low, volume):
         """
         戦略関数。Botを作成する際は、この関数を継承して実装してください。
         :param open: 始値
         :param close: 終値
         :param high: 高値
         :param low: 安値
+        :param volume: 出来高
         """
         pass
 

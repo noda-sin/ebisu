@@ -235,7 +235,7 @@ class BitMexStub(BitMex):
         戦略の関数を登録する。
         :param strategy:
         """
-        def __override_strategy(open, close, high, low):
+        def __override_strategy(open, close, high, low, volume):
             new_open_orders = []
 
             if self.get_position_size() > 0 and low[-1] > self.get_trail_price():
@@ -269,7 +269,7 @@ class BitMexStub(BitMex):
                 new_open_orders.append(order)
 
             self.open_orders = new_open_orders
-            strategy(open, close, high, low)
+            strategy(open, close, high, low, volume)
             self.eval_exit()
 
         BitMex.on_update(self, bin_size, __override_strategy)
