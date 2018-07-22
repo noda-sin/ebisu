@@ -245,6 +245,9 @@ def vix(close, low, pd=23, bbl=23, mult=1.9, lb=88, ph=0.85, pl=1.01):
 
     return green_hist, red_hist
 
+def vwap(high, low, volume):
+    average_price = volume * (high + low) / 2
+    return average_price.sum() / volume.sum()
 
 def is_under(src, value, p):
     for i in range(p, -1, -1):
