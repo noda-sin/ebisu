@@ -4,7 +4,7 @@ import random
 
 from hyperopt import hp
 
-from src import highest, lowest, sma, crossover, crossunder, last, stdev, rci, rsi, sar, is_under, is_over
+from src import highest, lowest, sma, crossover, crossunder, last, stdev, rci, rsi, sar, is_under, is_over, ema
 from src.bot import Bot
 
 
@@ -88,6 +88,34 @@ class Rci(Bot):
             self.exchange.entry("Short", False, lot)
         elif close_all:
             self.exchange.close_all()
+
+# OCC
+class OCC(Bot):
+    def __init__(self):
+        Bot.__init__(self, '11m')
+
+    def options(self):
+        return {
+            'basis_len': hp.quniform('basis_len', 1, 30, 1),
+        }
+
+    def strategy(self, open, close, high, low, volume):
+        lot = self.exchange.get_lot()
+
+        basis_len = self.input(defval=9,  title="basis_len", type=int)
+
+        def dema(src, length):
+            a = ema(src, length)
+            return 2 * a - ema(a, length)
+
+        dema_close = dema(close, basis_len)
+        dema_open  = dema(open,  basis_len)
+
+        long  = crossover(dema_close, dema_open)
+        short = crossunder(dema_close, dema_open)
+
+        self.exchange.entry("Long", True,   lot, when=long)
+        self.exchange.entry("Short", False, lot, when=short)
 
 # サンプル戦略
 class Sample(Bot):
