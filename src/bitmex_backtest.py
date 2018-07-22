@@ -59,7 +59,7 @@ class BitMexBackTest(BitMexStub):
         """
         return self.time
 
-    def entry(self, id, long, qty, limit=0, stop=0, when=True):
+    def entry(self, id, long, qty, limit=0, stop=0, post_only=False, when=True):
         """
         注文をする。pineの関数と同等の機能。
         https://jp.tradingview.com/study-script-reference/#fun_strategy{dot}entry
@@ -68,20 +68,22 @@ class BitMexBackTest(BitMexStub):
         :param qty: 注文量
         :param limit: 指値
         :param stop: ストップ指値
+        :param post_only: ポストオンリー
         :param when: 注文するか
         :return:
         """
-        BitMexStub.entry(self, id, long, qty, limit, stop, when)
+        BitMexStub.entry(self, id, long, qty, limit, stop, post_only, when)
 
-    def commit(self, id, long, qty, price):
+    def commit(self, id, long, qty, price, need_commission=True):
         """
         約定する。
         :param id: 注文番号
         :param long: ロング or ショート
         :param qty: 注文量
         :param price: 価格
+        :param need_commission: 手数料が発生するか
         """
-        BitMexStub.commit(self, id, long, qty, price)
+        BitMexStub.commit(self, id, long, qty, price, need_commission)
 
         if long:
             self.buy_signals.append(self.index)

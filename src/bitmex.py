@@ -230,11 +230,16 @@ class BitMex:
                     f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
                     f"{order['price']}, {order['stopPx']})")
 
-    def __new_order(self, ord_id, side, ord_qty, limit=0, stop=0):
+    def __new_order(self, ord_id, side, ord_qty, limit=0, stop=0, post_only=False):
         """
         注文を作成する
         """
-        if limit > 0 and stop > 0:
+        if limit > 0 and post_only:
+            ord_type = "Limit"
+            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
+                                                              side=side, orderQty=ord_qty, price=limit,
+                                                              execInst='ParticipateDoNotInitiate').result())
+        elif limit > 0 and stop > 0:
             ord_type = "StopLimit"
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
                                                               side=side, orderQty=ord_qty, price=limit,
@@ -247,6 +252,12 @@ class BitMex:
             ord_type = "Stop"
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
                                                               side=side, orderQty=ord_qty, stopPx=stop).result())
+        elif post_only:
+            ord_type = "Limit"
+            limit = self.get_market_price() + (-20 if side == "Buy" else 20)
+            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
+                                                              side=side, orderQty=ord_qty, price=limit,
+                                                              execInst='ParticipateDoNotInitiate').result())
         else:
             ord_type = "Market"
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
@@ -297,7 +308,7 @@ class BitMex:
 
             notify(f"Amend Order\nType: {ord_type}\nSide: {side}\nQty: {ord_qty}\nLimit: {limit}\nStop: {stop}")
 
-    def entry(self, id, long, qty, limit=0, stop=0, when=True):
+    def entry(self, id, long, qty, limit=0, stop=0, post_only=False, when=True):
         """
         注文をする。pineの関数と同等の機能。
         https://jp.tradingview.com/study-script-reference/#fun_strategy{dot}entry
@@ -306,6 +317,7 @@ class BitMex:
         :param qty: 注文量
         :param limit: 指値
         :param stop: ストップ指値
+        :param post_only: ポストオンリー
         :param when: 注文するか
         :return:
         """
@@ -327,9 +339,9 @@ class BitMex:
 
         ord_qty = qty + abs(pos_size)
 
-        self.order(id, long, ord_qty, limit, stop, when)
+        self.order(id, long, ord_qty, limit, stop, post_only, when)
 
-    def order(self, id, long, qty, limit=0, stop=0, when=True):
+    def order(self, id, long, qty, limit=0, stop=0, post_only=False, when=True):
         """
         注文をする。pineの関数と同等の機能。
         https://jp.tradingview.com/study-script-reference/#fun_strategy{dot}order
@@ -338,6 +350,7 @@ class BitMex:
         :param qty: 注文量
         :param limit: 指値
         :param stop: ストップ指値
+        :param post_only: ポストオンリー
         :param when: 注文するか
         :return:
         """
@@ -356,7 +369,7 @@ class BitMex:
         ord_id = id + ord_suffix() if order is None else order["clOrdID"]
 
         if order is None:
-            self.__new_order(ord_id, side, ord_qty, limit, stop)
+            self.__new_order(ord_id, side, ord_qty, limit, stop, post_only)
         else:
             self.__amend_order(ord_id, side, ord_qty, limit, stop)
 
