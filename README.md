@@ -20,6 +20,7 @@ The author is not responsible for any damage caused by this software.
 1. Channel Breakout
 2. Cross SMA
 3. RCI
+4. Open Close Cross Strategy
 
 ## Dependencies
 
@@ -158,6 +159,7 @@ $ python main.py --strategy Sample
 1. チャネルブレイクアウト戦略
 2. SMAのクロス戦略
 3. Rci戦略
+4. Open Close Cross戦略
 
 ## 依存環境
 
