@@ -85,7 +85,7 @@ class BitMexStub(BitMex):
             return
         long = pos_size < 0
         ord_qty = abs(pos_size)
-        self.commit(id, long, ord_qty, self.get_market_price())
+        self.commit(id, long, ord_qty, self.get_market_price(), True)
 
     def cancel(self, id):
         """
@@ -95,7 +95,7 @@ class BitMexStub(BitMex):
         """
         self.open_orders = [o for o in self.open_orders if o["id"] != id]
 
-    def entry(self, id, long, qty, limit=0, stop=0, when=True):
+    def entry(self, id, long, qty, limit=0, stop=0, post_only=False, when=True):
         """
         注文をする。pineの関数と同等の機能。
         https://jp.tradingview.com/study-script-reference/#fun_strategy{dot}entry
@@ -104,6 +104,7 @@ class BitMexStub(BitMex):
         :param qty: 注文量
         :param limit: 指値
         :param stop: ストップ指値
+        :param post_only: ポストオンリー
         :param when: 注文するか
         :return:
         """
@@ -122,30 +123,32 @@ class BitMexStub(BitMex):
         ord_qty = qty + abs(pos_size)
 
         if limit > 0 or stop > 0:
-            self.open_orders.append({"id": id, "long": long, "qty": ord_qty, "limit": limit, "stop": stop})
+            self.open_orders.append({"id": id, "long": long, "qty": ord_qty, "limit": limit, "stop": stop, "post_only": post_only})
         else:
-            self.commit(id, long, ord_qty, self.get_market_price())
+            self.commit(id, long, ord_qty, self.get_market_price(), True)
             return
 
-    def commit(self, id, long, qty, price):
+    def commit(self, id, long, qty, price, need_commission=True):
         """
         約定する。
         :param id: 注文番号
         :param long: ロング or ショート
         :param qty: 注文量
         :param price: 価格
+        :param need_commission: 手数料が発生するか
         """
         self.order_count += 1
 
         order_qty = qty if long else -qty
         next_qty = self.get_position_size() + order_qty
+        commission = self.get_commission() if need_commission else 0.0
 
         if (self.get_position_size() > 0 >= order_qty) or (self.get_position_size() < 0 < order_qty):
             if self.get_position_avg_price() > price:
-                close_rate = ((self.get_position_avg_price() - price) / price - self.get_commission()) * self.get_leverage()
+                close_rate = ((self.get_position_avg_price() - price) / price - commission) * self.get_leverage()
                 profit = -1 * self.get_position_size() * close_rate
             else:
-                close_rate = ((price - self.get_position_avg_price()) / self.get_position_avg_price() - self.get_commission()) * self.get_leverage()
+                close_rate = ((price - self.get_position_avg_price()) / self.get_position_avg_price() - commission) * self.get_leverage()
                 profit = self.get_position_size() * close_rate
 
             if profit > 0:
@@ -249,21 +252,22 @@ class BitMexStub(BitMex):
                 qty = order["qty"]
                 limit = order["limit"]
                 stop = order["stop"]
+                post_only = order["post_only"]
 
                 if limit > 0 and stop > 0:
                     if (long and high[-1] > stop and close[-1] < limit) or (not long and low[-1] < stop and close[-1] > limit):
-                        self.commit(id, long, qty, limit)
+                        self.commit(id, long, qty, limit, False)
                         continue
                     elif (long and high[-1] > stop) or (not long and low[-1] < stop):
                         new_open_orders.append({"id": id, "long": long, "qty": qty, "limit": limit, "stop": 0})
                         continue
                 elif limit > 0:
                     if (long and low[-1] < limit) or (not long and high[-1] > limit):
-                        self.commit(id, long, qty, limit)
+                        self.commit(id, long, qty, limit, False)
                         continue
                 elif stop > 0:
                     if (long and high[-1] > stop) or (not long and low[-1] < stop):
-                        self.commit(id, long, qty, stop)
+                        self.commit(id, long, qty, stop, False)
                         continue
 
                 new_open_orders.append(order)
