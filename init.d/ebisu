@@ -12,7 +12,7 @@
 DAEMON_NAME=ebisu
 DAEMON_DIR=/usr/local/bin/ebisu
 
-START_SCRIPT="python main.py --strategy VixRci"
+START_SCRIPT="python main.py --strategy OCC"
 
 PID_FILE=/var/run/$DAEMON_NAME.pid
 LOCK_FILE=/var/lock/subsys/$DAEMON_NAME
