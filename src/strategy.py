@@ -112,14 +112,8 @@ class OCC(Bot):
         dema_close = dema(close, basis_len)
         dema_open  = dema(open,  basis_len)
 
-        logger.info(f"dema_close: {dema_close}")
-        logger.info(f"dema_open: {dema_open}")
-
         long  = crossover(dema_close, dema_open)
         short = crossunder(dema_close, dema_open)
-
-        logger.info(f"{long}, {short}")
-        notify(f"{dema_close[-2]} -> {dema_close[-1]}, {dema_open[-2]} -> {dema_open[-1]}, {long}, {short}")
 
         self.exchange.entry("Long", True,   lot, when=long)
         self.exchange.entry("Short", False, lot, when=short)

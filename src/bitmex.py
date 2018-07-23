@@ -117,7 +117,7 @@ class BitMex:
             return self.margin
         else:  # WebSocketで取得できていない場合
             self.margin = retry(lambda: self.private_client
-                                  .User.User_getMargin(currency="XBt").result())
+                                .User.User_getMargin(currency="XBt").result())
             return self.margin
 
     def get_leverage(self):
@@ -455,8 +455,8 @@ class BitMex:
 
         while True:
             source = retry(lambda: self.public_client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=fetch_bin_size,
-                                                                            startTime=left_time, endTime=right_time,
-                                                                            count=500, partial=False).result())
+                                                                              startTime=left_time, endTime=right_time,
+                                                                              count=500, partial=False).result())
             if len(source) == 0:
                 break
 
@@ -496,15 +496,9 @@ class BitMex:
         if self.data.iloc[-1].name == re_sample_data.iloc[-1].name:
             self.data = re_sample_data.iloc[-1 * self.ohlcv_len:, :]
 
-        logger.info(f"re_sample_data: {re_sample_data}")
-        logger.info(f"self.data: {self.data}")
-        logger.info(f"len: {len(self.data)}")
-
         if self.last_action_time is not None and \
-            self.last_action_time == re_sample_data.iloc[-1].name:
+                self.last_action_time == re_sample_data.iloc[-1].name:
             return
-
-        logger.info(f"{re_sample_data.iloc[-1].name}")
 
         open = re_sample_data['open'].values
         close = re_sample_data['close'].values
