@@ -460,7 +460,7 @@ class BitMex:
 
         if self.data is None:
             end_time = datetime.now(timezone.utc)
-            start_time = end_time - self.ohlcv_len/allowed_range[self.bin_size][2] * delta(self.bin_size)
+            start_time = end_time - 500/allowed_range[self.bin_size][2] * delta(self.bin_size)
             d1 = self.fetch_ohlcv(self.bin_size, start_time, end_time)
             if len(d1) > 0:
                 d2 = self.fetch_ohlcv(allowed_range[self.bin_size][0],
@@ -480,6 +480,7 @@ class BitMex:
 
         logger.info(f"re_sample_data: {re_sample_data}")
         logger.info(f"self.data: {self.data}")
+        logger.info(f"len: {len(self.data)}")
 
         if self.last_action_time is not None and \
             self.last_action_time == re_sample_data.iloc[-1].name:
