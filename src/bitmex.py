@@ -476,7 +476,8 @@ class BitMex:
 
         else:
             self.data = pd.concat([self.data, new_data])
-            re_sample_data = resample(self.data, self.bin_size)
+            # 最後の行は不確定情報のため、排除する
+            re_sample_data = resample(self.data, self.bin_size)[:-1]
 
             logger.info(f"re_sample_data: {re_sample_data}")
 
