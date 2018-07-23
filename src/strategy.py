@@ -111,6 +111,9 @@ class OCC(Bot):
         dema_close = dema(close, basis_len)
         dema_open  = dema(open,  basis_len)
 
+        print(f"dema_close: {dema_close}")
+        print(f"dema_open: {dema_open}")
+
         long  = crossover(dema_close, dema_open)
         short = crossunder(dema_close, dema_open)
 

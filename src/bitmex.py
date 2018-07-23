@@ -460,16 +460,27 @@ class BitMex:
             end_time = datetime.now(timezone.utc)
             start_time = end_time - self.ohlcv_len * delta(self.bin_size)
             d1 = self.fetch_ohlcv(self.bin_size, start_time, end_time)
+            logger.info(f"d1: {d1}")
+
             if len(d1) > 0:
                 d2 = self.fetch_ohlcv(allowed_range[self.bin_size][0],
                                       d1.iloc[-1].name + delta(allowed_range[self.bin_size][0]), end_time)
+
+                logger.info(f"d2: {d2}")
+
                 self.data = pd.concat([d1, d2])
             else:
                 self.data = d1
             re_sample_data = self.data
+            logger.info(f"re_sample_data: {re_sample_data}")
+
         else:
             self.data = pd.concat([self.data, new_data])
             re_sample_data = resample(self.data, self.bin_size)
+
+            logger.info(f"re_sample_data: {re_sample_data}")
+
+        logger.info(f"self.data: {self.data}")
 
         if self.data.iloc[-1].name == re_sample_data.iloc[-1].name:
             self.data = re_sample_data.iloc[-1 * self.ohlcv_len:, :]
