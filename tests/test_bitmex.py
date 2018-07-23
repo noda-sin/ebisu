@@ -29,13 +29,9 @@ class TestBitMex(unittest.TestCase):
         bitmex = BitMex(threading=False)
 
         end_time = datetime.now(timezone.utc)
-        start_time = end_time - ohlcv_len/allowed_range[bin_size][2] * delta(bin_size)
+        start_time = end_time - ohlcv_len * delta(bin_size)
         d1 = bitmex.fetch_ohlcv(bin_size, start_time, end_time)
-        print(f"d1: {d1}")
-
-        d2 = bitmex.fetch_ohlcv(allowed_range[bin_size][0],
-                              d1.iloc[-1].name + delta(allowed_range[bin_size][0]), end_time)
-        print(f"d2: {d2}")
+        print(f"{d1}")
 
     def test_entry_cancel(self):
         bitmex = BitMex()

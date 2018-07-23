@@ -5,6 +5,7 @@ import math
 import os
 import traceback
 from datetime import datetime, timezone
+import time
 
 import pandas as pd
 from bravado.exception import HTTPNotFound
@@ -446,12 +447,29 @@ class BitMex:
         :return:
         """
         self.__init_client()
+
         fetch_bin_size = allowed_range[bin_size][0]
-        data = retry(lambda: self.public_client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=fetch_bin_size,
-                                                                        startTime=start_time, endTime=end_time,
-                                                                        count=500, partial=False).result())
-        data_frame = to_data_frame(data)
-        return resample(data_frame, bin_size)
+        left_time = start_time
+        right_time = end_time
+        data = to_data_frame([])
+
+        while True:
+            source = retry(lambda: self.public_client.Trade.Trade_getBucketed(symbol="XBTUSD", binSize=fetch_bin_size,
+                                                                            startTime=left_time, endTime=right_time,
+                                                                            count=500, partial=False).result())
+            if len(source) == 0:
+                break
+
+            source = to_data_frame(source)
+            data = pd.concat([data, source])
+
+            if right_time > source.iloc[-1].name + delta(fetch_bin_size):
+                left_time = source.iloc[-1].name + delta(fetch_bin_size)
+                time.sleep(2)
+            else:
+                break
+
+        return resample(data, bin_size)
 
     def __update_ohlcv(self, new_data):
         """
@@ -460,7 +478,7 @@ class BitMex:
 
         if self.data is None:
             end_time = datetime.now(timezone.utc)
-            start_time = end_time - 500/allowed_range[self.bin_size][2] * delta(self.bin_size)
+            start_time = end_time - self.ohlcv_len * delta(self.bin_size)
             d1 = self.fetch_ohlcv(self.bin_size, start_time, end_time)
             if len(d1) > 0:
                 d2 = self.fetch_ohlcv(allowed_range[self.bin_size][0],
