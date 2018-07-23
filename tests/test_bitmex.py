@@ -3,6 +3,7 @@
 import unittest
 from datetime import datetime, timezone, timedelta
 
+from src import delta, allowed_range
 from src.bitmex import BitMex
 
 
@@ -21,6 +22,20 @@ class TestBitMex(unittest.TestCase):
         start_time = end_time - 5 * timedelta(hours=2)
         source = bitmex.fetch_ohlcv('2h', start_time, end_time)
         assert len(source) > 1
+
+    def test_fetch_ohlcv_11m(self):
+        ohlcv_len = 100
+        bin_size = '11m'
+        bitmex = BitMex(threading=False)
+
+        end_time = datetime.now(timezone.utc)
+        start_time = end_time - ohlcv_len/allowed_range[bin_size][2] * delta(bin_size)
+        d1 = bitmex.fetch_ohlcv(bin_size, start_time, end_time)
+        print(f"d1: {d1}")
+
+        d2 = bitmex.fetch_ohlcv(allowed_range[bin_size][0],
+                              d1.iloc[-1].name + delta(allowed_range[bin_size][0]), end_time)
+        print(f"d2: {d2}")
 
     def test_entry_cancel(self):
         bitmex = BitMex()

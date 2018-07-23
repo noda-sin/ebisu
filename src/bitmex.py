@@ -458,7 +458,7 @@ class BitMex:
 
         if self.data is None:
             end_time = datetime.now(timezone.utc)
-            start_time = end_time - self.ohlcv_len * delta(self.bin_size)
+            start_time = end_time - self.ohlcv_len/allowed_range[self.bin_size][2] * delta(self.bin_size)
             d1 = self.fetch_ohlcv(self.bin_size, start_time, end_time)
             logger.info(f"d1: {d1}")
 
