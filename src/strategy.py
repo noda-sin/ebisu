@@ -114,8 +114,8 @@ class OCC(Bot):
         lot = self.exchange.get_lot()
 
         variant_type = self.input(defval=5, title="variant_type", type=int)
-        basis_len = self.input(defval=8,  title="basis_len", type=int)
-        resolution = self.input(defval=3, title='resolution', type=int)
+        basis_len = self.input(defval=18,  title="basis_len", type=int)
+        resolution = self.input(defval=15, title='resolution', type=int)
 
         source = self.exchange.security(str(resolution) + 'm')
 
