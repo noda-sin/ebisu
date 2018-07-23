@@ -4,8 +4,8 @@ import random
 
 from hyperopt import hp
 
-from src import highest, lowest, sma, crossover, crossunder, last, stdev, rci, rsi, sar, is_under, is_over, ema, logger, \
-    notify
+from src import highest, lowest, sma, crossover, crossunder, last, rci, double_ema, ema, triple_ema, wma, \
+    ssma, hull
 from src.bot import Bot
 
 
@@ -54,6 +54,7 @@ class SMA(Bot):
         if dead_cross:
             self.exchange.entry("Short", False, lot)
 
+
 # Rci戦略
 class Rci(Bot):
     def __init__(self):
@@ -90,8 +91,10 @@ class Rci(Bot):
         elif close_all:
             self.exchange.close_all()
 
+
 # OCC
 class OCC(Bot):
+    variants = [sma, ema, double_ema, triple_ema, wma, ssma, hull]
     eval_time = None
 
     def __init__(self):
@@ -102,6 +105,7 @@ class OCC(Bot):
 
     def options(self):
         return {
+            'variant_type': hp.quniform('variant_type', 0, len(self.variants) - 1, 1),
             'basis_len': hp.quniform('basis_len', 1, 30, 1),
             'resolution': hp.quniform('resolution', 1, 15, 1)
         }
@@ -109,26 +113,34 @@ class OCC(Bot):
     def strategy(self, open, close, high, low, volume):
         lot = self.exchange.get_lot()
 
-        basis_len = self.input(defval=9,  title="basis_len", type=int)
-        resolution = self.input(defval=11, title='resolution', type=int)
+        variant_type = self.input(defval=5, title="variant_type", type=int)
+        basis_len = self.input(defval=8,  title="basis_len", type=int)
+        resolution = self.input(defval=3, title='resolution', type=int)
 
         source = self.exchange.security(str(resolution) + 'm')
+
+        if self.eval_time is not None and \
+                self.eval_time == source.iloc[-1].name:
+            return
 
         series_open = source['open'].values
         series_close = source['close'].values
 
-        def dema(src, length):
-            a = ema(src, length)
-            return 2 * a - ema(a, length)
+        variant = self.variants[variant_type]
 
-        dema_open = dema(series_open,  basis_len)
-        dema_close = dema(close, basis_len)
+        val_open = variant(series_open,  basis_len)
+        val_close = variant(series_close, basis_len)
 
-        long = crossover(dema_close, dema_open)
-        short = crossunder(series_close, dema_open)
+        long = crossover(val_close, val_open)
+        short = crossunder(val_close, val_open)
 
+        self.exchange.plot('val_open', val_open[-1], 'b')
+        self.exchange.plot('val_close', val_close[-1], 'r')
         self.exchange.entry("Long", True,   lot, when=long)
         self.exchange.entry("Short", False, lot, when=short)
+
+        self.eval_time = source.iloc[-1].name
+
 
 # サンプル戦略
 class Sample(Bot):

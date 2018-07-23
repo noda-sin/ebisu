@@ -13,6 +13,7 @@ import requests
 import talib
 from bravado.exception import HTTPError
 
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -145,6 +146,28 @@ def ema(source, period):
     return talib.EMA(np.array(source), period)
 
 
+def double_ema(src, length):
+    ema_val = ema(src, length)
+    return 2 * ema_val - ema(ema_val, length)
+
+
+def triple_ema(src, length):
+    ema_val = ema(src, length)
+    return 3 * (ema_val - ema(ema_val, length)) + ema(ema(ema_val, length), length)
+
+
+def wma(src, length):
+    return talib.WMA(src, length)
+
+
+def ssma(src, length):
+    return pd.Series(src).ewm(alpha=1.0 / length).mean().values.flatten()
+
+
+def hull(src, length):
+    return wma(2 * wma(src, length / 2) - wma(src, length), round(np.sqrt(length)))
+
+
 def bbands(source, timeperiod=5, nbdevup=2, nbdevdn=2, matype=0):
     return talib.BBANDS(source, timeperiod, nbdevup, nbdevdn, matype)
 
@@ -168,8 +191,10 @@ def di_minus(high, low, close, period=14):
 def rsi(close, period=14):
     return talib.RSI(close, period)
 
+
 def sar(high, low, acceleration=0, maximum=0):
     return talib.SAR(high, low, acceleration, maximum)
+
 
 def delta(bin_size='1h'):
     if bin_size.endswith('d'):
@@ -178,6 +203,7 @@ def delta(bin_size='1h'):
         return timedelta(hours=allowed_range[bin_size][3])
     elif bin_size.endswith('m'):
         return timedelta(minutes=allowed_range[bin_size][3])
+
 
 def notify(message: object, fileName: object = None) -> object:
     url = 'https://notify-api.line.me/api/notify'
@@ -229,6 +255,7 @@ def rci(src, itv):
            for i in range(2)]
     return ret[::-1]
 
+
 def vix(close, low, pd=23, bbl=23, mult=1.9, lb=88, ph=0.85, pl=1.01):
     hst = highest(close, pd)
     wvf = (hst - low) / hst * 100
@@ -245,9 +272,11 @@ def vix(close, low, pd=23, bbl=23, mult=1.9, lb=88, ph=0.85, pl=1.01):
 
     return green_hist, red_hist
 
+
 def vwap(high, low, volume):
     average_price = volume * (high + low) / 2
     return average_price.sum() / volume.sum()
+
 
 def is_under(src, value, p):
     for i in range(p, -1, -1):

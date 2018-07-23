@@ -5,3 +5,4 @@ pandas
 bravado
 websocket-client
 hyperopt
+pyti
