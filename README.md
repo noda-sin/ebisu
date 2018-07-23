@@ -33,7 +33,7 @@ The author is not responsible for any damage caused by this software.
 #### OSX
 
 ```bash
-$ brew install talib
+$ brew install ta-lib
 $ git clone https://github.com/noda-sin/ebisu.git
 $ cd ebisu/
 $ pip install -r requirements.txt

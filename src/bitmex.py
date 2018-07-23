@@ -48,6 +48,8 @@ class BitMex:
     exit_order = {'profit': 0, 'loss': 0, 'trail_offset': 0}
     # Trailing Stopのためのピン留価格
     trail_price = 0
+    # 最後に戦略を実行した時間
+    last_action_time = None
 
     def __init__(self, demo=False, threading=True):
         """
@@ -460,31 +462,30 @@ class BitMex:
             end_time = datetime.now(timezone.utc)
             start_time = end_time - self.ohlcv_len/allowed_range[self.bin_size][2] * delta(self.bin_size)
             d1 = self.fetch_ohlcv(self.bin_size, start_time, end_time)
-            logger.info(f"d1: {d1}")
-
             if len(d1) > 0:
                 d2 = self.fetch_ohlcv(allowed_range[self.bin_size][0],
                                       d1.iloc[-1].name + delta(allowed_range[self.bin_size][0]), end_time)
 
-                logger.info(f"d2: {d2}")
-
                 self.data = pd.concat([d1, d2])
             else:
                 self.data = d1
-            re_sample_data = self.data
-            logger.info(f"re_sample_data: {re_sample_data}")
-
         else:
             self.data = pd.concat([self.data, new_data])
-            # 最後の行は不確定情報のため、排除する
-            re_sample_data = resample(self.data, self.bin_size)[:-1]
 
-            logger.info(f"re_sample_data: {re_sample_data}")
-
-        logger.info(f"self.data: {self.data}")
+        # 最後の行は不確定情報のため、排除する
+        re_sample_data = resample(self.data, self.bin_size)[:-1]
 
         if self.data.iloc[-1].name == re_sample_data.iloc[-1].name:
             self.data = re_sample_data.iloc[-1 * self.ohlcv_len:, :]
+
+        logger.info(f"re_sample_data: {re_sample_data}")
+        logger.info(f"self.data: {self.data}")
+
+        if self.last_action_time is not None and \
+            self.last_action_time == re_sample_data.iloc[-1].name:
+            return
+
+        logger.info(f"{re_sample_data.iloc[-1].name}")
 
         open = re_sample_data['open'].values
         close = re_sample_data['close'].values
@@ -495,6 +496,7 @@ class BitMex:
         try:
             if self.strategy is not None:
                 self.strategy(open, close, high, low, volume)
+            self.last_action_time = re_sample_data.iloc[-1].name
         except FatalError as e:
             # 致命的エラー
             logger.error(f"Fatal error. {e}")
