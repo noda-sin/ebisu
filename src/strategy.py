@@ -92,28 +92,40 @@ class Rci(Bot):
 
 # OCC
 class OCC(Bot):
+    eval_time = None
+
     def __init__(self):
-        Bot.__init__(self, '11m')
+        Bot.__init__(self, '1m')
+
+    def ohlcv_len(self):
+        return 15 * 30
 
     def options(self):
         return {
             'basis_len': hp.quniform('basis_len', 1, 30, 1),
+            'resolution': hp.quniform('resolution', 1, 15, 1)
         }
 
     def strategy(self, open, close, high, low, volume):
         lot = self.exchange.get_lot()
 
         basis_len = self.input(defval=9,  title="basis_len", type=int)
+        resolution = self.input(defval=11, title='resolution', type=int)
+
+        source = self.exchange.security(str(resolution) + 'm')
+
+        series_open = source['open'].values
+        series_close = source['close'].values
 
         def dema(src, length):
             a = ema(src, length)
             return 2 * a - ema(a, length)
 
+        dema_open = dema(series_open,  basis_len)
         dema_close = dema(close, basis_len)
-        dema_open  = dema(open,  basis_len)
 
-        long  = crossover(dema_close, dema_open)
-        short = crossunder(dema_close, dema_open)
+        long = crossover(dema_close, dema_open)
+        short = crossunder(series_close, dema_open)
 
         self.exchange.entry("Long", True,   lot, when=long)
         self.exchange.entry("Short", False, lot, when=short)

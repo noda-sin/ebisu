@@ -471,6 +471,12 @@ class BitMex:
 
         return resample(data, bin_size)
 
+    def security(self, bin_size):
+        """
+        別時間軸データを再計算して、取得する
+        """
+        return resample(self.data, bin_size)[:-1]
+
     def __update_ohlcv(self, new_data):
         """
         データを取得して、戦略を実行する。

@@ -6,7 +6,7 @@ from datetime import timedelta, datetime, timezone
 
 import pandas as pd
 
-from src import logger, allowed_range, retry, delta, load_data
+from src import logger, allowed_range, retry, delta, load_data, resample
 from src.bitmex_stub import BitMexStub
 
 OHLC_DIRNAME = os.path.join(os.path.dirname(__file__), "../ohlc/{}")
@@ -35,6 +35,8 @@ class BitMexBackTest(BitMexStub):
     start_balance = 0
     # プロットデータ
     plot_data = {}
+    # 別の時間軸データ
+    resample_data = {}
 
     def __init__(self):
         """
@@ -109,13 +111,13 @@ class BitMexBackTest(BitMexStub):
             self.balance_history.append((self.get_balance() - self.start_balance)/100000000*self.get_market_price())
 
         for i in range(len(self.df_ohlcv) - self.ohlcv_len):
-            slice = self.df_ohlcv.iloc[i:i + self.ohlcv_len, :]
-            timestamp = slice.iloc[-1].name
-            close = slice['close'].values
-            open = slice['open'].values
-            high = slice['high'].values
-            low = slice['low'].values
-            volume = slice['volume'].values
+            self.data = self.df_ohlcv.iloc[i:i + self.ohlcv_len, :]
+            timestamp = self.data.iloc[-1].name
+            close = self.data['close'].values
+            open = self.data['open'].values
+            high = self.data['high'].values
+            low = self.data['low'].values
+            volume = self.data['volume'].values
 
             if self.get_position_size() > 0 and low[-1] > self.get_trail_price():
                 self.set_trail_price(low[-1])
@@ -142,6 +144,14 @@ class BitMexBackTest(BitMexStub):
 
         BitMexStub.on_update(self, bin_size, strategy)
         self.__crawler_run()
+
+    def security(self, bin_size):
+        """
+        別時間軸データを再計算して、取得する
+        """
+        if bin_size not in self.resample_data:
+            self.resample_data[bin_size] = resample(self.df_ohlcv, bin_size)
+        return self.resample_data[bin_size][:self.data.iloc[-1].name].iloc[-1 * self.ohlcv_len:, :]
 
     def download_data(self, file, bin_size, start_time, end_time):
         """
