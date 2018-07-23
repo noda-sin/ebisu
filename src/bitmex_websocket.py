@@ -49,10 +49,10 @@ class BitMexWs:
             domain = 'testnet.bitmex.com'
         else:
             domain = 'www.bitmex.com'
-        endpoint = 'wss://' + domain + '/realtime?subscribe=tradeBin1m:XBTUSD,' \
+        self.endpoint = 'wss://' + domain + '/realtime?subscribe=tradeBin1m:XBTUSD,' \
                         'tradeBin5m:XBTUSD,tradeBin1h:XBTUSD,tradeBin1d:XBTUSD,instrument:XBTUSD,' \
                         'margin,position:XBTUSD,wallet'
-        self.ws = websocket.WebSocketApp(endpoint,
+        self.ws = websocket.WebSocketApp(self.endpoint,
                              on_message=self.__on_message,
                              on_error=self.__on_error,
                              on_close=self.__on_close,
@@ -156,6 +156,16 @@ class BitMexWs:
         :param func:
         """
         self.handlers['close'] = func
+
+        if self.is_running:
+            self.ws = websocket.WebSocketApp(self.endpoint,
+                                 on_message=self.__on_message,
+                                 on_error=self.__on_error,
+                                 on_close=self.__on_close,
+                                 header=self.__get_auth())
+            self.wst = threading.Thread(target=self.__start)
+            self.wst.daemon = True
+            self.wst.start()
         
     def bind(self, key, func):
         """
