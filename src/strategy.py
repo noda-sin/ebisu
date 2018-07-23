@@ -114,8 +114,8 @@ class OCC(Bot):
         long  = crossover(dema_close, dema_open)
         short = crossunder(dema_close, dema_open)
 
-        self.exchange.entry("Long", True,   lot, post_only=True, when=long)
-        self.exchange.entry("Short", False, lot, post_only=True, when=short)
+        self.exchange.entry("Long", True,   lot, when=long)
+        self.exchange.entry("Short", False, lot, when=short)
 
 # サンプル戦略
 class Sample(Bot):
