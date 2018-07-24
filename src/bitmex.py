@@ -18,6 +18,9 @@ from src.bitmex_websocket import BitMexWs
 
 
 # 本番取引用クラス
+from src.orderbook import OrderBook
+
+
 class BitMex:
     # wallet
     wallet = None
@@ -137,8 +140,10 @@ class BitMex:
         if self.position is not None:
             return self.position
         else:  # WebSocketで取得できていない場合
-            self.position = retry(lambda: self.private_client
-                                  .Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result())[0]
+            ret = retry(lambda: self.private_client
+                                  .Position.Position_get(filter=json.dumps({"symbol": "XBTUSD"})).result())
+            if len(ret) > 0:
+                self.position = ret[0]
             return self.position
 
     def get_position_size(self):
@@ -218,20 +223,21 @@ class BitMex:
         """
         注文をキャンセルする。
         :param id: 注文番号
-        :return:
+        :return 成功したか:
         """
         self.__init_client()
         order = self.get_open_order(id)
         if order is None:
-            return
+            return False
 
         try:
             retry(lambda: self.private_client.Order.Order_cancel(orderID=order['orderID']).result())[0]
         except HTTPNotFound:
-            return
+            return False
         logger.info(f"Cancel Order : (orderID, orderType, side, orderQty, limit, stop) = "
                     f"({order['orderID']}, {order['ordType']}, {order['side']}, {order['orderQty']}, "
                     f"{order['price']}, {order['stopPx']})")
+        return True
 
     def __new_order(self, ord_id, side, ord_qty, limit=0, stop=0, post_only=False):
         """
@@ -255,12 +261,25 @@ class BitMex:
             ord_type = "Stop"
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
                                                               side=side, orderQty=ord_qty, stopPx=stop).result())
-        elif post_only:
+        elif post_only: # market order with post only
             ord_type = "Limit"
-            limit = self.get_market_price() + (-20 if side == "Buy" else 20)
-            retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
-                                                              side=side, orderQty=ord_qty, price=limit,
-                                                              execInst='ParticipateDoNotInitiate').result())
+            i = 0
+            while True:
+                prices = self.ob.get_prices()
+                limit = prices[1] if side == "Buy" else prices[0]
+                retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
+                                                                  side=side, orderQty=ord_qty, price=limit,
+                                                                  execInst='ParticipateDoNotInitiate').result())
+                time.sleep(1)
+
+                if not self.cancel(ord_id):
+                    break
+                time.sleep(2)
+                i += 1
+                if i > 10:
+                    notify(f"Order retry count exceed")
+                    break
+            self.cancel_all()
         else:
             ord_type = "Market"
             retry(lambda: self.private_client.Order.Order_new(symbol="XBTUSD", ordType=ord_type, clOrdID=ord_id,
@@ -278,7 +297,7 @@ class BitMex:
 
             notify(f"New Order\nType: {ord_type}\nSide: {side}\nQty: {ord_qty}\nLimit: {limit}\nStop: {stop}")
 
-    def __amend_order(self, ord_id, side, ord_qty, limit=0, stop=0):
+    def __amend_order(self, ord_id, side, ord_qty, limit=0, stop=0, post_only=False):
         """
         注文を更新する
         """
@@ -294,6 +313,12 @@ class BitMex:
             ord_type = "Stop"
             retry(lambda: self.private_client.Order.Order_amend(origClOrdID=ord_id,
                                                                 orderQty=ord_qty, stopPx=stop).result())
+        elif post_only: # market order with post only
+            ord_type = "Limit"
+            prices = self.ob.get_prices()
+            limit = prices[1] if side == "Buy" else prices[0]
+            retry(lambda: self.private_client.Order.Order_amend(origClOrdID=ord_id,
+                                                                orderQty=ord_qty, price=limit).result())
         else:
             ord_type = "Market"
             retry(lambda: self.private_client.Order.Order_amend(origClOrdID=ord_id,
@@ -374,7 +399,7 @@ class BitMex:
         if order is None:
             self.__new_order(ord_id, side, ord_qty, limit, stop, post_only)
         else:
-            self.__amend_order(ord_id, side, ord_qty, limit, stop)
+            self.__amend_order(ord_id, side, ord_qty, limit, stop, post_only)
 
     def get_open_order(self, id):
         """
@@ -477,7 +502,7 @@ class BitMex:
         """
         return resample(self.data, bin_size)[:-1]
 
-    def __update_ohlcv(self, new_data):
+    def __update_ohlcv(self, action, new_data):
         """
         データを取得して、戦略を実行する。
         """
@@ -531,7 +556,7 @@ class BitMex:
             notify(f"An error occurred. {e}")
             notify(traceback.format_exc())
 
-    def __on_update_instrument(self, instrument):
+    def __on_update_instrument(self, action, instrument):
         """
          取引価格を更新する
         """
@@ -546,13 +571,13 @@ class BitMex:
                     self.market_price < self.get_trail_price():
                 self.set_trail_price(self.market_price)
 
-    def __on_update_wallet(self, wallet):
+    def __on_update_wallet(self, action, wallet):
         """
          walletを更新する
         """
         self.wallet = {**self.wallet, **wallet} if self.wallet is not None else self.wallet
 
-    def __on_update_position(self, position):
+    def __on_update_position(self, action, position):
         """
          ポジションを更新する
         """
@@ -564,15 +589,15 @@ class BitMex:
             self.set_trail_price(self.market_price)
 
         if is_update_pos_size:
-            logger.info(f"Updated Position: {position['currentQty']} => {self.get_position()['currentQty']}")
-            notify(f"Updated Position: {position['currentQty']} => {self.get_position()['currentQty']}")
+            logger.info(f"Updated Position: {self.get_position()['currentQty']} => {position['currentQty']}")
+            notify(f"Updated Position: {self.get_position()['currentQty']} => {position['currentQty']}")
 
         self.position = {**self.position, **position} if self.position is not None else self.position
 
         # 利確損切の評価
         self.eval_exit()
 
-    def __on_update_margin(self, margin):
+    def __on_update_margin(self, action, margin):
         """
          マージンを更新する
         """
@@ -592,6 +617,7 @@ class BitMex:
             self.ws.bind('wallet', self.__on_update_wallet)
             self.ws.bind('position', self.__on_update_position)
             self.ws.bind('margin', self.__on_update_margin)
+            self.ob = OrderBook(self.ws)
 
     def stop(self):
         """

@@ -51,7 +51,7 @@ class BitMexWs:
             domain = 'www.bitmex.com'
         self.endpoint = 'wss://' + domain + '/realtime?subscribe=tradeBin1m:XBTUSD,' \
                         'tradeBin5m:XBTUSD,tradeBin1h:XBTUSD,tradeBin1d:XBTUSD,instrument:XBTUSD,' \
-                        'margin,position:XBTUSD,wallet'
+                        'margin,position:XBTUSD,wallet,orderBookL2:XBTUSD'
         self.ws = websocket.WebSocketApp(self.endpoint,
                              on_message=self.__on_message,
                              on_error=self.__on_error,
@@ -83,7 +83,13 @@ class BitMexWs:
         """
         WebSocketを開始する
         """
-        self.ws.run_forever()
+        while True:
+            try:
+                self.ws.run_forever()
+                break
+            except Exception as e:
+                logger.error(e)
+
         while self.is_running:
             time.sleep(1)
 
@@ -113,34 +119,38 @@ class BitMexWs:
                     return
 
                 table = obj['table']
-                data = obj['data'][0]
+                action = obj['action']
+                data = obj['data']
 
                 if table.startswith("tradeBin"):
-                    data['timestamp'] = datetime.strptime(data['timestamp'][:-5], '%Y-%m-%dT%H:%M:%S')
-                    self.__emit(table, to_data_frame([data]))
+                    data[0]['timestamp'] = datetime.strptime(data[0]['timestamp'][:-5], '%Y-%m-%dT%H:%M:%S')
+                    self.__emit(table, action, to_data_frame([data[0]]))
 
                 elif table.startswith("instrument"):
-                    self.__emit(table, data)
+                    self.__emit(table, action, data[0])
 
                 elif table.startswith("margin"):
-                    self.__emit(table, data)
+                    self.__emit(table, action, data[0])
 
                 elif table.startswith("position"):
-                    self.__emit(table, data)
+                    self.__emit(table, action, data[0])
 
                 elif table.startswith("wallet"):
-                    self.__emit(table, data)
+                    self.__emit(table, action, data[0])
+
+                elif table.startswith("orderBookL2"):
+                    self.__emit(table, action, data)
 
         except Exception as e:
             logger.error(e)
             logger.error(traceback.format_exc())
 
-    def __emit(self, key, value):
+    def __emit(self, key, action, value):
         """
         データを送る
         """
         if key in self.handlers:
-            self.handlers[key](value)
+            self.handlers[key](action, value)
 
     def __on_close(self, ws):
         """
@@ -189,6 +199,8 @@ class BitMexWs:
             self.handlers['position'] = func
         if key == 'wallet':
             self.handlers['wallet'] = func
+        if key == 'orderBookL2':
+            self.handlers['orderBookL2'] = func
 
     def close(self):
         """

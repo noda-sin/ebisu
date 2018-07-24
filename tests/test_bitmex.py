@@ -61,3 +61,4 @@ class TestBitMex(unittest.TestCase):
         assert order["price"] == price-900
         bitmex.cancel(id)
         assert bitmex.get_open_order(id) is None
+

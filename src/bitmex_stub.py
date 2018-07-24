@@ -91,9 +91,10 @@ class BitMexStub(BitMex):
         """
         注文をキャンセルする。
         :param long: ロング or ショート
-        :return:
+        :return 成功したか:
         """
         self.open_orders = [o for o in self.open_orders if o["id"] != id]
+        return True
 
     def entry(self, id, long, qty, limit=0, stop=0, post_only=False, when=True):
         """

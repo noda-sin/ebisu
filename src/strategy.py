@@ -114,8 +114,8 @@ class OCC(Bot):
         lot = self.exchange.get_lot()
 
         variant_type = self.input(defval=5, title="variant_type", type=int)
-        basis_len = self.input(defval=18,  title="basis_len", type=int)
-        resolution = self.input(defval=15, title='resolution', type=int)
+        basis_len = self.input(defval=19,  title="basis_len", type=int)
+        resolution = self.input(defval=2, title='resolution', type=int)
 
         source = self.exchange.security(str(resolution) + 'm')
 
@@ -136,8 +136,8 @@ class OCC(Bot):
 
         self.exchange.plot('val_open', val_open[-1], 'b')
         self.exchange.plot('val_close', val_close[-1], 'r')
-        self.exchange.entry("Long", True,   lot, when=long)
-        self.exchange.entry("Short", False, lot, when=short)
+        self.exchange.entry("Long", True,   lot, post_only=True, when=long)
+        self.exchange.entry("Short", False, lot, post_only=True, when=short)
 
         self.eval_time = source.iloc[-1].name
 
