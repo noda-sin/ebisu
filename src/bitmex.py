@@ -563,6 +563,10 @@ class BitMex:
         if is_update_pos_size and position['currentQty'] != 0:
             self.set_trail_price(self.market_price)
 
+        if is_update_pos_size:
+            logger.info(f"Updated Position: {position['currentQty']} => {self.get_position()['currentQty']}")
+            notify(f"Updated Position: {position['currentQty']} => {self.get_position()['currentQty']}")
+
         self.position = {**self.position, **position} if self.position is not None else self.position
 
         # 利確損切の評価
