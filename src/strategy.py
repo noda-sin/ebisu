@@ -108,7 +108,8 @@ class OCC(Bot):
         return {
             'variant_type': hp.quniform('variant_type', 0, len(self.variants) - 1, 1),
             'basis_len': hp.quniform('basis_len', 1, 30, 1),
-            'resolution': hp.quniform('resolution', 1, 15, 1)
+            'resolution': hp.quniform('resolution', 1, 15, 1),
+            'sma_len': hp.quniform('sma_len', 1, 15, 1)
         }
 
     def strategy(self, open, close, high, low, volume):
@@ -116,7 +117,8 @@ class OCC(Bot):
 
         variant_type = self.input(defval=5, title="variant_type", type=int)
         basis_len = self.input(defval=19,  title="basis_len", type=int)
-        resolution = self.input(defval=2, title='resolution', type=int)
+        resolution = self.input(defval=2, title="resolution", type=int)
+        sma_len = self.input(defval=9, title="sma_len", type=int)
 
         source = self.exchange.security(str(resolution) + 'm')
 
@@ -132,9 +134,6 @@ class OCC(Bot):
         val_open = variant(series_open,  basis_len)
         val_close = variant(series_close, basis_len)
 
-        # long = crossover(val_close, val_open)
-        # short = crossunder(val_close, val_open)
-
         if val_open[-1] > val_close[-1]:
             high_val = val_open[-1]
             low_val = val_close[-1]
@@ -142,10 +141,13 @@ class OCC(Bot):
             high_val = val_close[-1]
             low_val = val_open[-1]
 
+        sma_val = sma(close, sma_len)
+
         self.exchange.plot('val_open', val_open[-1], 'b')
         self.exchange.plot('val_close', val_close[-1], 'r')
-        self.exchange.entry("Long", True,   lot, stop=math.floor(low_val))
-        self.exchange.entry("Short", False, lot, stop=math.ceil(high_val))
+
+        self.exchange.entry("Long", True,   lot, stop=math.floor(low_val), when=(sma_val[-1] < low_val))
+        self.exchange.entry("Short", False, lot, stop=math.ceil(high_val), when=(sma_val[-1] > high_val))
 
         self.eval_time = source.iloc[-1].name
 
