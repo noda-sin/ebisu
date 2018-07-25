@@ -2,6 +2,7 @@
 
 import random
 
+import math
 from hyperopt import hp
 
 from src import highest, lowest, sma, crossover, crossunder, last, rci, double_ema, ema, triple_ema, wma, \
@@ -131,13 +132,20 @@ class OCC(Bot):
         val_open = variant(series_open,  basis_len)
         val_close = variant(series_close, basis_len)
 
-        long = crossover(val_close, val_open)
-        short = crossunder(val_close, val_open)
+        # long = crossover(val_close, val_open)
+        # short = crossunder(val_close, val_open)
+
+        if val_open[-1] > val_close[-1]:
+            high_val = val_open[-1]
+            low_val = val_close[-1]
+        else:
+            high_val = val_close[-1]
+            low_val = val_open[-1]
 
         self.exchange.plot('val_open', val_open[-1], 'b')
         self.exchange.plot('val_close', val_close[-1], 'r')
-        self.exchange.entry("Long", True,   lot, post_only=True, when=long)
-        self.exchange.entry("Short", False, lot, post_only=True, when=short)
+        self.exchange.entry("Long", True,   lot, stop=math.floor(low_val))
+        self.exchange.entry("Short", False, lot, stop=math.ceil(high_val))
 
         self.eval_time = source.iloc[-1].name
 

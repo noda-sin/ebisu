@@ -589,8 +589,8 @@ class BitMex:
             self.set_trail_price(self.market_price)
 
         if is_update_pos_size:
-            logger.info(f"Updated Position: {self.get_position()['currentQty']} => {position['currentQty']}")
-            notify(f"Updated Position: {self.get_position()['currentQty']} => {position['currentQty']}")
+            logger.info(f"Updated Position\nPosition Size: {self.get_position()['currentQty']} => {position['currentQty']}\nBalance: {self.get_balance()/100000000} XBT")
+            notify(f"Updated Position\nPosition Size: {self.get_position()['currentQty']} => {position['currentQty']}\nBalance: {self.get_balance()/100000000} XBT")
 
         self.position = {**self.position, **position} if self.position is not None else self.position
 
