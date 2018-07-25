@@ -110,7 +110,7 @@ class OCC(Bot):
         return {
             'variant_type': hp.quniform('variant_type', 0, len(self.variants) - 1, 1),
             'basis_len': hp.quniform('basis_len', 1, 30, 1),
-            'resolution': hp.quniform('resolution', 1, 15, 1),
+            'resolution': hp.quniform('resolution', 1, 10, 1),
             'sma_len': hp.quniform('sma_len', 1, 15, 1),
             'div_threshold': hp.quniform('div_threshold', 1, 6, 0.1),
         }
