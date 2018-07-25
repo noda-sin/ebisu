@@ -4,7 +4,7 @@ import sys
 
 from hyperopt import fmin, tpe, STATUS_OK, STATUS_FAIL, Trials
 
-from src import logger
+from src import logger, notify
 from src.bitmex import BitMex
 from src.bitmex_stub import BitMexStub
 from src.bitmex_backtest import BitMexBackTest
@@ -104,9 +104,6 @@ class Bot:
         """
 ˜       Botを起動する関数。
         """
-        logger.info(f"Starting Bot")
-        logger.info(f"Strategy : {type(self).__name__}")
-
         if self.hyperopt:
             logger.info(f"Bot Mode : Hyperopt")
             self.params_search()
@@ -124,6 +121,15 @@ class Bot:
 
         self.exchange.ohlcv_len = self.ohlcv_len()
         self.exchange.on_update(self.bin_size, self.strategy)
+
+        logger.info(f"Starting Bot")
+        logger.info(f"Strategy : {type(self).__name__}")
+        logger.info(f"Balance : {self.exchange.get_balance()}")
+
+        notify(f"Starting Bot\n"
+               f"Strategy : {type(self).__name__}\n"
+               f"Balance : {self.exchange.get_balance()/100000000} XBT")
+
         self.exchange.show_result()
 
     def stop(self):
