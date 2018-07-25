@@ -3,6 +3,8 @@
 import random
 
 import math
+
+import numpy
 from hyperopt import hp
 
 from src import highest, lowest, sma, crossover, crossunder, last, rci, double_ema, ema, triple_ema, wma, \
@@ -109,7 +111,8 @@ class OCC(Bot):
             'variant_type': hp.quniform('variant_type', 0, len(self.variants) - 1, 1),
             'basis_len': hp.quniform('basis_len', 1, 30, 1),
             'resolution': hp.quniform('resolution', 1, 15, 1),
-            'sma_len': hp.quniform('sma_len', 1, 15, 1)
+            'sma_len': hp.quniform('sma_len', 1, 15, 1),
+            'div_threshold': hp.quniform('div_threshold', 1, 6, 0.1),
         }
 
     def strategy(self, open, close, high, low, volume):
@@ -119,6 +122,7 @@ class OCC(Bot):
         basis_len = self.input(defval=19,  title="basis_len", type=int)
         resolution = self.input(defval=2, title="resolution", type=int)
         sma_len = self.input(defval=9, title="sma_len", type=int)
+        div_threshold = self.input(defval=3.0, title="div_threshold", type=float)
 
         source = self.exchange.security(str(resolution) + 'm')
 
@@ -148,6 +152,12 @@ class OCC(Bot):
 
         self.exchange.entry("Long", True,   lot, stop=math.floor(low_val), when=(sma_val[-1] < low_val))
         self.exchange.entry("Short", False, lot, stop=math.ceil(high_val), when=(sma_val[-1] > high_val))
+
+        open_close_div = sma(numpy.abs(val_open - val_close), sma_len)
+
+        if open_close_div[-1] > div_threshold and \
+                open_close_div[-2] > div_threshold < open_close_div[-2]:
+            self.exchange.close_all()
 
         self.eval_time = source.iloc[-1].name
 
