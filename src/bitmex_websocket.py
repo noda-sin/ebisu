@@ -83,15 +83,11 @@ class BitMexWs:
         """
         WebSocketを開始する
         """
-        while True:
+        while self.is_running:
             try:
                 self.ws.run_forever()
-                break
-            except Exception as e:
-                logger.error(e)
-
-        while self.is_running:
-            time.sleep(1)
+            except:
+                pass
 
     def __on_error(self, ws, message):
         """
@@ -167,16 +163,6 @@ class BitMexWs:
         """
         self.handlers['close'] = func
 
-        if self.is_running:
-            self.ws = websocket.WebSocketApp(self.endpoint,
-                                 on_message=self.__on_message,
-                                 on_error=self.__on_error,
-                                 on_close=self.__on_close,
-                                 header=self.__get_auth())
-            self.wst = threading.Thread(target=self.__start)
-            self.wst.daemon = True
-            self.wst.start()
-        
     def bind(self, key, func):
         """
         新しいデータの通知先を登録する。
