@@ -154,6 +154,9 @@ class BitMexWs:
             self.handlers['close']()
 
         if self.is_running:
+            logger.info("Websocket restart")
+            notify(f"Websocket restart")
+
             self.ws = websocket.WebSocketApp(self.endpoint,
                                  on_message=self.__on_message,
                                  on_error=self.__on_error,
