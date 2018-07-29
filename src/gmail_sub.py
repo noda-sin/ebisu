@@ -18,11 +18,10 @@ def credentials():
 
 def service():
     http = credentials().authorize(httplib2.Http())
-    return apiclient.discovery.build("gmail", "v1", http=http)
+    return apiclient.discovery.build("gmail", "v1", http=http, cache_discovery=False)
 
 
 def get_messages_list(user_id, from_address, after):
-    print(after)
     if from_address is None:
         query = f"after:{after}"
     else:
@@ -37,6 +36,7 @@ def get_message_detail(id, user_id):
 
 class GmailSub():
     interval = 30
+    is_running = True
     last_time = None
     from_address = None
     message_handler = None
@@ -60,8 +60,11 @@ class GmailSub():
     def on_error(self, callback):
         self.error_handler = callback
 
+    def stop(self):
+        self.is_running = False
+
     def __start(self):
-        while True:
+        while self.is_running:
             try:
                 ms = self.__get_messages()
                 if self.message_handler is not None:
