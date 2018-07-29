@@ -7,3 +7,5 @@ lib/
 backtest.csv
 ohlc/
 *.egg-info/
+credentials.json
+token.json
