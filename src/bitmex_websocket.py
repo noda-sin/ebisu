@@ -153,6 +153,7 @@ class BitMexWs:
         if 'close' in self.handlers:
             self.handlers['close']()
 
+<<<<<<< HEAD
         if self.is_running:
             logger.info("Websocket restart")
             notify(f"Websocket restart")
@@ -173,6 +174,8 @@ class BitMexWs:
         """
         self.handlers['close'] = func
 
+=======
+>>>>>>> b1385b4ac33fb741e74cfe14242369c67c5a9d8e
     def bind(self, key, func):
         """
         新しいデータの通知先を登録する。
