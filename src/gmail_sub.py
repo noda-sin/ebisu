@@ -35,7 +35,7 @@ def get_message_detail(id, user_id):
 
 
 class GmailSub():
-    interval = 30
+    interval = 1
     is_running = True
     last_time = None
     from_address = None
