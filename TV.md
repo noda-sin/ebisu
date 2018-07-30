@@ -60,7 +60,7 @@ https://developers.google.com/gmail/api/quickstart/python?hl=ja
 
 9. Token生成用のプログラムを実行します。
 
-    ```python
+    ```bash
     $ pip install --upgrade google-api-python-client oauth2client
     $ python quickstart.py
     ```
@@ -92,6 +92,6 @@ https://developers.google.com/gmail/api/quickstart/python?hl=ja
 
 `--strategy`オプションに`TV`を指定して実行してください。
 
-```python
+```bash
 $ python main.py --strategy TV
 ```
