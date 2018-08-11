@@ -97,7 +97,7 @@ $ python main.py --strategy Doten
 It is possible to trade with [testnet](https://testnet.bitmex.com/).
 
 ```bash
-$ python main.py --test --strategy Doten
+$ python main.py --demo --strategy Doten
 ```
 
 ### 3. Back test Mode
@@ -178,7 +178,7 @@ $ python main.py --strategy Sample
 #### OSX の場合
 
 ```bash
-$ brew install talib
+$ brew install ta-lib
 $ git clone https://github.com/noda-sin/ebisu.git
 $ cd ebisu/
 $ pip install -r requirements.txt
@@ -243,7 +243,7 @@ $ python main.py --strategy Doten
 `--demo` 引数を追加することで、[testnet](https://testnet.bitmex.com/) での取引を行えます。
 
 ```bash
-$ python main.py --test --strategy Doten
+$ python main.py --demo --strategy Doten
 ```
 
 ### 3. バックテストモード
