@@ -41,7 +41,7 @@ def ord_suffix():
 
 def load_data(file):
     """
-    ファイルからデータを読み込む。
+    Read data from a file.
     """
     source = pd.read_csv(file)
     data_frame = pd.DataFrame({

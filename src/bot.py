@@ -11,49 +11,49 @@ from src.bitmex_backtest import BitMexBackTest
 
 
 class Bot:
-    # パラメータ
+    # Parameters
     params = {}
-    # 取引所
+    # Exchange
     exchange = None
-    # 時間足
+    # Time Frame
     bin_size = '1h'
-    # 足の期間
+    # periods
     periods = 20
-    # テストネットを利用するか
+    # run on test net?
     test_net = False
-    # バックテストか
+    # Back test?
     back_test = False
-    # スタブ取引か
+    # Stub Test?
     stub_test = False
-    # パラメータ探索か
+    # parameter search?
     hyperopt = False
 
     def __init__(self, bin_size):
         """
-        コンストラクタ。
-        :param bin_size: 時間足
-        :param periods: 期間
+        constructor
+        :param bin_size: time_frame
+        :param periods: period
         """
         self.bin_size = bin_size
 
     def options(self):
         """
-        パレメータ探索用の値を取得する関数。
+        Function to obtain value for searching for a parameter.
         """
         pass
 
     def ohlcv_len(self):
         """
-        戦略にわたすOHLCの長さ
+        The length of the OHLC to the strategy
         """
         return 100
 
     def input(self, title, type, defval):
         """
-        パレメータを取得する関数。
-        :param title: パレメータ名
-        :param defval: デフォルト値
-        :return: 値
+        function to get param
+        :param title: title of the parm
+        :param defval: default value
+        :return value
         """
         p = {} if self.params is None else self.params
         if title in p:
@@ -63,18 +63,18 @@ class Bot:
 
     def strategy(self, open, close, high, low, volume):
         """
-        戦略関数。Botを作成する際は、この関数を継承して実装してください。
-        :param open: 始値
-        :param close: 終値
-        :param high: 高値
-        :param low: 安値
-        :param volume: 出来高
+        Strategy function, when creating a bot please inherit this and implement this fn. 
+        :param open: open price
+        :param close: close price
+        :param high: high price
+        :param low: low price
+        :param volume: volume
         """
         pass
 
     def params_search(self):
         """
- ˜      パラメータ検索を行う関数。
+ ˜      function to search params
         """
         def objective(args):
             logger.info(f"Params : {args}")
@@ -102,7 +102,7 @@ class Bot:
 
     def run(self):
         """
-˜       Botを起動する関数。
+˜       Function to run the bot
         """
         if self.hyperopt:
             logger.info(f"Bot Mode : Hyperopt")
@@ -134,7 +134,7 @@ class Bot:
 
     def stop(self):
         """
-˜       Botを停止する関数。Openしている注文は、キャンセルする。
+˜       Function that stops the bot and cancel all trades.
         """
         if self.exchange is None:
             return

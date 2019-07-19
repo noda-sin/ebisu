@@ -37,19 +37,19 @@ class TestBitMex(unittest.TestCase):
         bitmex = BitMex()
         bitmex.demo = True
 
-        # 前処理
+        # close current orders
         bitmex.close_all()
 
         price = bitmex.get_market_price()
 
-        # 注文、キャンセルの試験
+        # TEST: CANCELLATION
         id = "Long"
         bitmex.entry(id, True, 1, limit=price-1000)
         assert bitmex.get_open_order(id) is not None
         bitmex.cancel(id)
         assert bitmex.get_open_order(id) is None
 
-        # 注文の更新
+        # TEST: UPDATE ORDER
         id = "Long"
         bitmex.entry(id, True, 1, limit=price-1000)
         order = bitmex.get_open_order(id)

@@ -15,7 +15,7 @@ from src.bitmex_stub import BitMexStub
 from src.bot import Bot
 
 
-# チャネルブレイクアウト戦略
+# Channel breakout strategy
 from src.gmail_sub import GmailSub
 
 
@@ -39,7 +39,7 @@ class Doten(Bot):
         self.exchange.entry("Short", False, round(lot / 2), stop=dn)
 
 
-# SMAクロス戦略
+# SMA CrossOver
 class SMA(Bot):
     def __init__(self):
         Bot.__init__(self, '2h')
@@ -64,7 +64,7 @@ class SMA(Bot):
             self.exchange.entry("Short", False, lot)
 
 
-# Rci戦略
+# Rci
 class Rci(Bot):
     def __init__(self):
         Bot.__init__(self, '5m')
@@ -229,11 +229,9 @@ class TV(Bot):
     def stop(self):
         self.subscriber.stop()
 
-# サンプル戦略
+# sample strategy
 class Sample(Bot):
     def __init__(self):
-        # 第一引数: 戦略で使う足幅
-        # 1分足で直近10期間の情報を戦略で必要とする場合
         Bot.__init__(self, '1m')
 
     def options(self):

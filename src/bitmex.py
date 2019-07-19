@@ -17,7 +17,7 @@ from src.bitmex_api import bitmex_api
 from src.bitmex_websocket import BitMexWs
 
 
-# 本番取引用クラス
+# Class for production transaction
 from src.orderbook import OrderBook
 
 

@@ -33,16 +33,16 @@ def generate_signature(secret, verb, url, nonce, data):
 
 
 class BitMexWs:
-    # テストネット
+    # testnet
     testnet = False
-    # 稼働状態
+    # condition that the bot runs on.
     is_running = True
-    # 通知先リスナー
+    # Notification destination listener
     handlers = {}
     
     def __init__(self, test=False):
         """
-        コンストラクタ
+        constructor
         """
         self.testnet = test
         if test:
@@ -63,7 +63,7 @@ class BitMexWs:
 
     def __get_auth(self):
         """
-        認証情報を設定する
+        get auth info
         """
         api_key = os.environ.get("BITMEX_TEST_APIKEY") if self.testnet else os.environ.get("BITMEX_APIKEY")
         api_secret = os.environ.get("BITMEX_TEST_SECRET") if self.testnet else os.environ.get("BITMEX_SECRET")
@@ -81,14 +81,14 @@ class BitMexWs:
 
     def __start(self):
         """
-        WebSocketを開始する
+        start the websocket.
         """
         while self.is_running:
             self.ws.run_forever()
 
     def __on_error(self, ws, message):
         """
-        WebSokcetでエラーが発生した場合
+        On Error listener
         :param ws:
         :param message:
         """
@@ -100,7 +100,7 @@ class BitMexWs:
 
     def __on_message(self, ws, message):
         """
-        新しいデータを取得した場合
+        On Message listener
         :param ws:
         :param message:
         :return:
@@ -140,14 +140,14 @@ class BitMexWs:
 
     def __emit(self, key, action, value):
         """
-        データを送る
+        send data
         """
         if key in self.handlers:
             self.handlers[key](action, value)
 
     def __on_close(self, ws):
         """
-        クローズした場合
+        On Close Listener
         :param ws:
         """
         if 'close' in self.handlers:
@@ -168,14 +168,14 @@ class BitMexWs:
 
     def on_close(self, func):
         """
-        クローズの通知先を登録する。
+        on close fn
         :param func:
         """
         self.handlers['close'] = func
 
     def bind(self, key, func):
         """
-        新しいデータの通知先を登録する。
+        bind fn
         :param key:
         :param func:
         """
@@ -200,7 +200,7 @@ class BitMexWs:
 
     def close(self):
         """
-        クローズする。
+        close websocket
         """
         self.is_running = False
         self.ws.close()

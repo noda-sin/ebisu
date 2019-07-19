@@ -16,13 +16,13 @@ if __name__ == "__main__":
     parser.add_argument("--strategy", default="doten", required=True)
     args = parser.parse_args()
 
-    # ボットを作成する
+    # create the bot instance
     bot = BotFactory.create(args)
-    # ボットを稼働する
+    # run the instance
     bot.run()
 
     if not args.test:
-        # 停止処理を登録する
+        # register stopping
         signal.signal(signal.SIGINT, lambda x, y: bot.stop())
         while True:
             time.sleep(1)
